@@ -1,31 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
-  Upload, 
-  Download, 
-  Play, 
-  Pause, 
-  Loader2, 
-  Film, 
-  Mic2, 
-  Clock,
-  Settings,
-  Video,
-  Save,
-  Trash2,
-  Zap,
-  Music2,
-  Check,
-  XCircle,
-  FileVideo,
-  Share2,
-  Volume2,
-  Key,
-  Scissors,
-  RefreshCw,
-  Waves
+  Upload, Download, Play, Pause, Loader2, Film, Mic2, Settings,
+  Save, Zap, Check, XCircle, Volume2, Key, Scissors, RefreshCw, Waves, Square, Trash, Layers
 } from 'lucide-react';
 
-const apiKey = ""; // Environment API Key
+const apiKey = ""; // Canvas runtime injects key here
+const INITIAL_MODEL = "gemini-2.5-flash-preview-09-2025";
+const API_KEY_ENV = apiKey; 
 
 const VOICES = [
   { id: 'Charon', gender: 'Male', name: 'Charon', desc: 'ရင့်ကျက်တည်ငြိမ် (Default)' },
@@ -35,27 +16,15 @@ const VOICES = [
   { id: 'Zephyr', gender: 'Female', name: 'Zephyr', desc: 'နူးညံ့သိမ်မွေ့ (Female)' },
 ];
 
-// --- Error Translation Helper ---
-const translateApiError = (errorMsg) => {
-  const msg = (errorMsg || "").toLowerCase();
-  
-  if (msg.includes('quota') || msg.includes('rate limit') || msg.includes('exceeded') || msg.includes('429')) {
-    return "⚠️ API အသုံးပြုမှု ကန့်သတ်ချက် ပြည့်သွားပါပြီ။\n\n(Free API ဖြစ်သဖြင့် တစ်မိနစ်လျှင် အကြိမ်ရေ ကန့်သတ်ချက်ရှိပါသည်။ ကျေးဇူးပြု၍ ၁ မိနစ်ခန့် စောင့်ပြီးမှ ထပ်မံကြိုးစားကြည့်ပါ။)";
-  }
-  if (msg.includes('api key') || msg.includes('key not valid') || msg.includes('unauthorized') || msg.includes('403')) {
-    return "⚠️ API Key မှားယွင်းနေပါသည်။\n\nSettings တွင် မှန်ကန်သော API Key ထည့်သွင်းပေးပါ။";
-  }
-  if (msg.includes('not found') || msg.includes('404')) {
-    return "⚠️ ရွေးချယ်ထားသော Model ကို ရှာမတွေ့ပါ။\n\nSettings တွင် အခြား Model တစ်ခုသို့ ပြောင်းလဲစမ်းသပ်ကြည့်ပါ။";
-  }
-  if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
-    return "⚠️ အင်တာနက် ချိတ်ဆက်မှု ပြဿနာဖြစ်နေပါသည်။\n\nInternet Connection ကို စစ်ဆေးပြီး ပြန်လည်ကြိုးစားပါ။";
-  }
-  if (msg.includes('payload too large') || msg.includes('size')) {
-    return "⚠️ ဗီဒီယို ဖိုင်အရွယ်အစား ကြီးလွန်းနေပါသည်။\n\nပိုတိုသော သို့မဟုတ် ဖိုင်ဆိုဒ်ပိုသေးသော ဗီဒီယိုဖြင့် စမ်းသပ်ကြည့်ပါ။";
-  }
-  
-  return `⚠️ အမှားအယွင်းဖြစ်ပွားနေပါသည်:\n${errorMsg}\n\nအကြံပြုချက်: Video Size ကို လျှော့ချကြည့်ပါ သို့မဟုတ် ခဏစောင့်ပြီး ပြန်ကြိုးစားပါ။`;
+const TRACK_HEIGHT = 46; 
+
+const translateApiError = (err) => {
+  const m = (err || "").toString().toLowerCase();
+  if (m.includes('quota') || m.includes('429')) return "⚠️ API အသုံးပြုမှု အကြိမ်ရေ ပြည့်သွားပါပြီ။ ၁ မိနစ်ခန့် စောင့်ပေးပါ။";
+  if (m.includes('key not valid')) return "⚠️ API Key မှားယွင်းနေပါသည်။ Settings တွင် ပြန်စစ်ပါ။";
+  if (m.includes('safety')) return "⚠️ Safety Filter ကြောင့် အသံထုတ်မရပါ။ စကားလုံးအသုံးအနှုန်းကို အနည်းငယ် ပြင်ကြည့်ပါ။";
+  if (m.includes('not found')) return "⚠️ Gemini 2.5 ကို သင့် Key ဖြင့် အသုံးပြုခွင့် မရသေးပါ။";
+  return `⚠️ အမှားအယွင်း: ${err}`;
 };
 
 export default function App() {
@@ -67,951 +36,760 @@ export default function App() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [progress, setProgress] = useState('');
   const [selectedVoice, setSelectedVoice] = useState('Charon');
-  
-  // API & Settings State
-  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('ai_video_api_key') || '');
-  
-  // Auto-migrate old unavailable model to stable 1.5 flash
-  const [activeModel, setActiveModel] = useState(() => {
-    const stored = localStorage.getItem('ai_video_model');
-    if (stored === 'gemini-2.5-flash-preview-09-2025') return 'gemini-1.5-flash';
-    return stored || 'gemini-1.5-flash';
-  });
-  
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Auto Discovery (2.5 Only)
+  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('ai_v_key_v2.5_only') || '');
+  const [activeModel, setActiveModel] = useState(() => localStorage.getItem('ai_v_model_v2.5_only') || INITIAL_MODEL);
+  const [modelStatus, setModelStatus] = useState('idle');
   const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('ai_video_api_key', customApiKey);
-    localStorage.setItem('ai_video_model', activeModel);
-  }, [customApiKey, activeModel]);
-
-  const activeKey = customApiKey.trim() || apiKey;
-
-  // Editor Tools State
-  const [activeTab, setActiveTab] = useState('audio'); 
-  
+  // Editor State
+  const [activeTab, setActiveTab] = useState('script'); 
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(10);
-  
   const [vidAudioTrimStart, setVidAudioTrimStart] = useState(0);
   const [vidAudioTrimEnd, setVidAudioTrimEnd] = useState(10);
-
+  
+  // AI Segment Structure: { id, aStart, aEnd, vStart, track }
   const [aiSegments, setAiSegments] = useState([]); 
-  const [audioDuration, setAudioDuration] = useState(0);
-
+  const [selectedAiSegId, setSelectedAiSegId] = useState(null);
+  
+  // Dragging States
+  const [dragState, setDragState] = useState(null); // For AI Audio Segments
+  const [playheadDrag, setPlayheadDrag] = useState(false); // For Playhead (Red Line)
+  
   const [videoVolume, setVideoVolume] = useState(0.5);
   const [aiVolume, setAiVolume] = useState(1.0);
-
-  const [previewLoading, setPreviewLoading] = useState(null);
-  const [playingPreview, setPlayingPreview] = useState(null);
-
-  const [slowMoSegments, setSlowMoSegments] = useState([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+  const [isRecording, setIsRecording] = useState(false);
   const [recordedVideo, setRecordedVideo] = useState(null);
 
   const videoRef = useRef(null);
   const audioRef = useRef(null);
-  const previewAudioRef = useRef(null);
   const fileInputRef = useRef(null);
+  const timelineRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
-  const exportTimeUpdateHandlerRef = useRef(null);
 
-  // Apply Live Volumes
+  const activeKey = customApiKey.trim() || API_KEY_ENV;
+
+  const discoverModel = useCallback(async (key) => {
+    if (!key) return;
+    setModelStatus('searching');
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error("Invalid Key");
+      
+      const allNames = (data.models || []).map(m => m.name);
+      const priorities = ["models/gemini-2.5-flash-preview-09-2025", "models/gemini-2.5-flash", "models/gemini-2.5-pro"];
+      
+      let found = null;
+      for (const t of priorities) {
+          if (allNames.includes(t)) {
+              found = t.replace("models/", "");
+              break;
+          }
+      }
+
+      if (found) {
+        setActiveModel(found);
+        localStorage.setItem('ai_v_model_v2.5_only', found);
+        setModelStatus('found');
+      } else {
+        setActiveModel(INITIAL_MODEL);
+        setModelStatus('error');
+      }
+    } catch (e) { setModelStatus('error'); }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('ai_v_key_v2.5_only', customApiKey);
+    if (customApiKey.trim()) discoverModel(customApiKey.trim());
+  }, [customApiKey, discoverModel]);
+
+  const syncAiAudio = useCallback((t) => {
+    if (!audioRef.current || !audioUrl || !aiSegments || aiSegments.length === 0) return;
+    const sortedSegments = [...aiSegments].sort((a, b) => (a.track || 0) - (b.track || 0));
+    const seg = sortedSegments.find(s => t >= s.vStart && t < s.vStart + (s.aEnd - s.aStart));
+    
+    if (seg) {
+      const audioT = seg.aStart + (t - seg.vStart);
+      if (audioRef.current.paused) {
+        audioRef.current.currentTime = audioT;
+        audioRef.current.play().catch(() => {});
+      } else if (Math.abs(audioRef.current.currentTime - audioT) > 0.3) {
+        audioRef.current.currentTime = audioT;
+      }
+      audioRef.current.volume = aiVolume;
+    } else if (!audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+  }, [audioUrl, aiSegments, aiVolume]);
+
   useEffect(() => {
     if (videoRef.current && !isRecording) {
-      if (currentTime >= vidAudioTrimStart && currentTime <= vidAudioTrimEnd) {
-        videoRef.current.muted = false;
-        videoRef.current.volume = videoVolume;
-      } else {
-        videoRef.current.muted = true;
-      }
+      const inRange = (currentTime >= vidAudioTrimStart && currentTime <= vidAudioTrimEnd);
+      videoRef.current.muted = !inRange;
+      videoRef.current.volume = videoVolume;
     }
   }, [currentTime, vidAudioTrimStart, vidAudioTrimEnd, videoVolume, isRecording]);
 
+  // Global Dragging Logic (For Playhead & AI Audio Segments)
   useEffect(() => {
-    if (audioRef.current && !isRecording) {
-      audioRef.current.volume = aiVolume;
-    }
-  }, [aiVolume, isRecording]);
+    if (!dragState && !playheadDrag) return;
 
-  // --- Utilities ---
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const pcmToWav = (pcmData, sampleRate) => {
-    const buffer = new ArrayBuffer(44 + pcmData.length * 2);
-    const view = new DataView(buffer);
-    const writeString = (offset, string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-    writeString(0, 'RIFF');
-    view.setUint32(4, 32 + pcmData.length * 2, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(36, 'data');
-    view.setUint32(40, pcmData.length * 2, true);
-    let offset = 44;
-    for (let i = 0; i < pcmData.length; i++, offset += 2) {
-      view.setInt16(offset, pcmData[i], true);
-    }
-    return new Blob([buffer], { type: 'audio/wav' });
-  };
-
-  const formatTime = (time) => {
-    if (isNaN(time)) return "0:00.0";
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    const ms = Math.floor((time % 1) * 10);
-    return `${mins}:${secs.toString().padStart(2, '0')}.${ms}`;
-  };
-
-  const formatTimeExact = (time) => {
-    if (isNaN(time)) return "00:00";
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // --- Core Handlers ---
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      if (selectedFile.size > 50 * 1024 * 1024) {
-        alert('File too large (Max 50MB). Base64 upload works best under 10MB.');
+    const handleMove = (e) => {
+      // 1. Playhead Dragging Logic
+      if (playheadDrag) {
+        if (!timelineRef.current || !duration) return;
+        const rect = timelineRef.current.getBoundingClientRect();
+        let nt = ((e.clientX - rect.left) / rect.width) * duration;
+        nt = Math.max(0, Math.min(nt, duration));
+        
+        if (videoRef.current) {
+           videoRef.current.currentTime = nt;
+           setCurrentTime(nt);
+        }
         return;
       }
-      setFile(selectedFile);
-      setVideoUrl(URL.createObjectURL(selectedFile));
-      setScript('');
-      setAudioUrl(null);
-      setSlowMoSegments([]);
-      setIsPlaying(false);
-      setRecordedVideo(null);
-      
-      setTrimStart(0);
-      setVidAudioTrimStart(0);
-      setAiSegments([]);
-      setAudioDuration(0);
-    }
+
+      // 2. Audio Segment Dragging & Collision Detection Logic
+      if (dragState && timelineRef.current) {
+        const rect = timelineRef.current.getBoundingClientRect();
+        const scrollTop = timelineRef.current.scrollTop;
+        
+        const deltaT = ((e.clientX - dragState.startX) / rect.width) * duration;
+        
+        setAiSegments(prev => {
+          const seg = prev.find(s => s.id === dragState.id);
+          if (!seg) return prev;
+          
+          const segDuration = seg.aEnd - seg.aStart;
+          let nV = dragState.startV + deltaT;
+          nV = Math.max(0, Math.min(nV, duration - segDuration)); // Timeline Boundaries Check
+
+          const relativeY = e.clientY - rect.top + scrollTop;
+          let newTrack = Math.floor(relativeY / TRACK_HEIGHT);
+          newTrack = Math.max(0, newTrack); // Prevent Negative Track
+
+          // Overlap Prevention (Collision Detection)
+          const otherSegs = prev.filter(s => s.id !== dragState.id && (s.track || 0) === newTrack);
+          const eps = 0.005; // tiny tolerance
+
+          for (let oSeg of otherSegs) {
+            let oStart = oSeg.vStart;
+            let oEnd = oSeg.vStart + (oSeg.aEnd - oSeg.aStart);
+            let myEnd = nV + segDuration;
+
+            // If overlap occurs on the same track
+            if (nV < oEnd - eps && myEnd > oStart + eps) {
+              if (dragState.startV <= oStart) {
+                 nV = oStart - segDuration; // Push Left
+              } else {
+                 nV = oEnd; // Push Right
+              }
+            }
+          }
+          
+          // Final boundary check after collision resolution
+          nV = Math.max(0, Math.min(nV, duration - segDuration));
+
+          return prev.map(s => s.id === dragState.id ? { ...s, vStart: nV, track: newTrack } : s);
+        });
+      }
+    };
+
+    const handleUp = () => {
+      setDragState(null);
+      setPlayheadDrag(false);
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+  }, [dragState, playheadDrag, duration]);
+
+  const pcmToWav = (pcm, rate) => {
+    const buf = new ArrayBuffer(44 + pcm.length * 2);
+    const view = new DataView(buf);
+    const writeS = (o, str) => { for (let i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i)); };
+    writeS(0, 'RIFF'); view.setUint32(4, 32 + pcm.length * 2, true); writeS(8, 'WAVE'); writeS(12, 'fmt ');
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+    writeS(36, 'data'); view.setUint32(40, pcm.length * 2, true);
+    for (let i = 0, o = 44; i < pcm.length; i++, o += 2) view.setInt16(o, pcm[i], true);
+    return new Blob([buf], { type: 'audio/wav' });
   };
 
-  const handlePlayPreview = async (e, voice) => {
-    e.stopPropagation(); 
-    if (playingPreview === voice.id && previewAudioRef.current) {
-      previewAudioRef.current.pause();
-      setPlayingPreview(null);
-      return;
-    }
-    if (!activeKey) return alert("Settings တွင် API Key ထည့်ပါ။");
-
-    setPreviewLoading(voice.id);
-    try {
-      const text = voice.gender === 'Male' 
-        ? `မင်္ဂလာပါ၊ ကျွန်တော့်အသံကတော့ ဒီလိုမျိုးဖြစ်ပါတယ် ခင်ဗျာ။` : `မင်္ဂလာပါ၊ ကျွန်မရဲ့အသံကတော့ ဒီလိုမျိုးဖြစ်ပါတယ် ရှင်။`;
-
-      const ttsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
-          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice.id } } } },
-          model: "gemini-2.5-flash-preview-tts"
-        })
-      });
-      const ttsData = await ttsResponse.json();
-      if (!ttsResponse.ok) {
-          alert(translateApiError(ttsData.error?.message));
-          setPreviewLoading(null);
-          return;
-      }
-
-      const audioData = ttsData.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-      if (audioData) {
-        const binaryString = atob(audioData.data);
-        const bytes = new Int16Array(binaryString.length / 2);
-        for (let i = 0; i < binaryString.length; i += 2) bytes[i / 2] = (binaryString.charCodeAt(i + 1) << 8) | binaryString.charCodeAt(i);
-        const wavBlob = pcmToWav(bytes, parseInt(audioData.mimeType?.split('rate=')[1]) || 24000);
-        const url = URL.createObjectURL(wavBlob);
-
-        if (previewAudioRef.current) {
-          previewAudioRef.current.src = url;
-          previewAudioRef.current.play();
-          setPlayingPreview(voice.id);
-          previewAudioRef.current.onended = () => setPlayingPreview(null);
-        }
-      } else {
-        alert("API မှ အသံဒေတာ မရရှိပါ။ (Quota Limit ကြောင့် ဖြစ်နိုင်ပါသည်)");
-      }
-    } catch (error) {
-      alert(translateApiError(error.message));
-    } finally {
-      setPreviewLoading(null);
+  const handleFileChange = (e) => {
+    const f = e.target.files[0];
+    if (f) {
+      setFile(f); setVideoUrl(URL.createObjectURL(f));
+      setScript(''); setAudioUrl(null); setAiSegments([]); setIsPlaying(false);
+      setTrimStart(0); setVidAudioTrimStart(0); setDuration(0);
+      setRecordedVideo(null); setSelectedAiSegId(null);
     }
   };
 
   const generateContent = async () => {
-    if (!file || !activeKey) return alert("API Key ထည့်ပါ။");
-
-    setLoading(true);
-    setProgress('ဗီဒီယိုကို လေ့လာနေပါသည်...');
-    setScript(''); 
-    setAiSegments([]); 
-    setAudioUrl(null);
-    
+    if (!file) return;
+    if (!activeKey) {
+      setShowSettings(true);
+      return;
+    }
+    setLoading(true); setProgress(`Gemini 2.5 ဖြင့် အသေးစိတ် လေ့လာနေသည်...`); setScript(''); setAiSegments([]); setAudioUrl(null);
     try {
-      const base64Video = await fileToBase64(file);
-      const durationSecs = Math.max(1, Math.floor(trimEnd - trimStart));
-      const maxWords = Math.max(3, Math.floor(durationSecs * 2.5)); 
-      
-      const prompt = `You are a short-form video commentator. 
-      Analyze the video strictly between ${formatTimeExact(trimStart)} and ${formatTimeExact(trimEnd)} ONLY. 
-      
-      CRITICAL RULES:
-      1. DIRECT MATCH: If walking, say walking. If eating, say eating.
-      2. SUPER SHORT: Maximum ${maxWords} words. Keep it very brief!
-      3. NATURAL BURMESE: Use spoken conversational Burmese.
-      4. CLEAN OUTPUT: Output ONLY the exact Burmese script to be spoken. NO [00:00] timestamps.
-      5. FAMILY FRIENDLY (SAFETY): Avoid describing bathing, suggestive actions, or sensitive scenarios that could trigger safety filters. Focus on safe, normal actions.`;
-      
-      const genResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${activeKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64Video } }] }] })
+      const reader = new FileReader();
+      const base64 = await new Promise((res) => {
+        reader.onload = () => res(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
       });
-      
-      const genData = await genResponse.json();
-      if (!genResponse.ok || genData.error) {
-          setScript(translateApiError(genData.error?.message));
-          setLoading(false);
-          setProgress('');
-          return;
-      }
 
-      let text = genData.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-          setScript("No script generated. AI မှ ဗီဒီယိုကို နားမလည်နိုင်ပါ။");
-          setLoading(false);
-          setProgress('');
-          return;
-      }
-
-      text = text.replace(/\[.*?\]/g, '').replace(/\*/g, '').replace(/\"/g, '').trim();
-      setScript(text);
-      setProgress(`အသံဖန်တီးနေပါသည်...`);
+      const prompt = `You are an energetic Burmese narrator. Focus ONLY on video from ${formatTime(trimStart)} to ${formatTime(trimEnd)}.
+      - TONE: Lively, energetic, cinematic and poetic (ဖွဲ့ဖွဲ့နွဲ့နွဲ့).
+      - STYLE: Natural spoken particles like "နော်", "လေးဗျာ", "မိုက်တယ်".
+      - NO formal written Burmese.
+      - Descriptive and flowy paragraphs. Burmese only. No timestamps.`;
       
-      const ttsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${activeKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `Speak naturally and concisely: ${text}` }] }],
-          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } },
-          model: "gemini-2.5-flash-preview-tts"
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64 } }] }] })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || "Model Error");
+
+      let txt = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      txt = txt.replace(/\[.*?\]/g, '').replace(/\*/g, '').trim();
+      setScript(txt); setProgress(`တက်ကြွသော AI အသံ ဖန်တီးနေသည်...`);
+      
+      const tts = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          contents: [{ parts: [{ text: txt }] }],
+          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } }, 
         })
       });
-
-      const ttsData = await ttsResponse.json();
-      if (!ttsResponse.ok || ttsData.error) {
-          setScript(prev => prev + `\n\n` + translateApiError(ttsData.error?.message));
-          setLoading(false);
-          setProgress('');
-          return;
-      }
-
-      const audioData = ttsData.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+      const ttsD = await tts.json();
       
-      // Strict check for Missing Audio Data (Safety or Quota Drop)
-      if (audioData) {
-        const binaryString = atob(audioData.data);
-        const bytes = new Int16Array(binaryString.length / 2);
-        for (let i = 0; i < binaryString.length; i += 2) {
-            bytes[i / 2] = (binaryString.charCodeAt(i + 1) << 8) | binaryString.charCodeAt(i);
-        }
-        
-        const sampleRate = parseInt(audioData.mimeType?.split('rate=')[1]) || 24000;
-        const calcDuration = bytes.length / sampleRate; 
-        
-        const wavBlob = pcmToWav(bytes, sampleRate);
-        setAudioUrl(URL.createObjectURL(wavBlob));
-        
-        setAudioDuration(calcDuration);
-        setAiSegments([{ id: Date.now(), aStart: 0, aEnd: calcDuration, vStart: trimStart }]);
+      if (!tts.ok) throw new Error(ttsD.error?.message || "TTS API Error");
 
-      } else {
-        // If API succeeded but no inlineData returned (Safety Catch)
-        const finishReason = ttsData.candidates?.[0]?.finishReason;
-        if (finishReason === 'SAFETY') {
-             setScript(prev => prev + '\n\n⚠️ အသံဖိုင် ဖန်တီး၍မရပါ။ \n(အကြောင်းရင်း: စာသားတွင် "ရေချိုးသည်" ကဲ့သို့သော စကားလုံးများ ပါဝင်နေ၍ Google Safety Filter မှ အသံဖန်တီးမှုကို ပိတ်ပင်လိုက်ပါသည်)');
-        } else {
-             setScript(prev => prev + '\n\n⚠️ အသံဖိုင် ဖန်တီး၍မရပါ။ (API မှ အသံဒေတာ မရရှိပါ - Quota Limit ပြည့်သွားခြင်း ဖြစ်နိုင်ပါသည်)');
-        }
-      }
-    } catch (e) {
-      setScript(translateApiError(e.message));
-    } finally {
-      setLoading(false);
-      setProgress('');
-    }
+      const audioPart = ttsD.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
+      if (audioPart) {
+        const bin = atob(audioPart.data);
+        const bytes = new Int16Array(bin.length / 2);
+        for (let i = 0; i < bin.length; i += 2) bytes[i/2] = (bin.charCodeAt(i+1) << 8) | bin.charCodeAt(i);
+        const rate = parseInt(audioPart.mimeType?.split('rate=')[1]) || 24000;
+        const dur = bytes.length / rate;
+        setAudioUrl(URL.createObjectURL(pcmToWav(bytes, rate)));
+        setAiSegments([{ id: Date.now(), aStart: 0, aEnd: dur, vStart: trimStart, track: 0 }]);
+        setSelectedAiSegId(null);
+      } else { throw new Error("Safety Filter ကြောင့် အသံထုတ်မရပါ။"); }
+    } catch (e) { setScript(translateApiError(e.message)); } finally { setLoading(false); setProgress(''); }
   };
 
-  // --- AUDIO SYNC LOGIC ---
-  const syncAiAudio = (currTime) => {
-    if (!audioRef.current || !audioUrl) return;
-
-    const activeSeg = aiSegments.find(s => currTime >= s.vStart && currTime < s.vStart + (s.aEnd - s.aStart));
-
-    if (activeSeg) {
-        const expectedAudioTime = activeSeg.aStart + (currTime - activeSeg.vStart);
-        
-        if (audioRef.current.paused) {
-            audioRef.current.currentTime = expectedAudioTime;
-            audioRef.current.play().catch(e => console.log("Play interrupted", e));
-        } else if (Math.abs(audioRef.current.currentTime - expectedAudioTime) > 0.25) {
-            audioRef.current.currentTime = expectedAudioTime;
-        }
-        audioRef.current.volume = aiVolume;
-    } else {
-        if (!audioRef.current.paused) {
-            audioRef.current.pause();
-        }
-    }
+  const toPct = (v, t) => {
+    if (!t || t <= 0 || isNaN(v) || isNaN(t)) return "0%";
+    return `${Math.max(0, Math.min((v / t) * 100, 100))}%`;
   };
 
-  const handleSplitAudio = () => {
-    const activeSegIndex = aiSegments.findIndex(s => currentTime >= s.vStart && currentTime < s.vStart + (s.aEnd - s.aStart));
-    if (activeSegIndex === -1) return;
-
-    const seg = aiSegments[activeSegIndex];
-    const offsetInAudio = currentTime - seg.vStart;
-    const splitAudioTime = seg.aStart + offsetInAudio;
-
-    if (splitAudioTime - seg.aStart < 0.3 || seg.aEnd - splitAudioTime < 0.3) {
-        alert("ဖြတ်ရန် အချိန်တိုလွန်းပါသည်။ ပိုရှည်သောအပိုင်းကို ရွေးချယ်ပါ။");
-        return;
-    }
-
-    const seg1 = { ...seg, aEnd: splitAudioTime };
-    const seg2 = {
-        id: Date.now(),
-        aStart: splitAudioTime,
-        aEnd: seg.aEnd,
-        vStart: currentTime + 0.1 
-    };
-
-    const newSegments = [...aiSegments];
-    newSegments.splice(activeSegIndex, 1, seg1, seg2);
-    setAiSegments(newSegments);
-  };
-
-  const updateSegmentVStart = (id, newVStart) => {
-    setAiSegments(prev => prev.map(seg => seg.id === id ? { ...seg, vStart: newVStart } : seg));
-    if (isPlaying) togglePlay();
-  };
-
-  // --- Editor Playback Logic ---
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
+  // Allow clicking empty timeline space to jump playhead and start drag
+  const handleTimelinePointerDown = (e) => {
+    if (dragState || playheadDrag || !timelineRef.current || !duration) return;
+    if (videoRef.current && isPlaying) {
         videoRef.current.pause();
-        if(audioRef.current) audioRef.current.pause();
-      } else {
-        if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
-          videoRef.current.currentTime = trimStart;
-        }
-        syncAiAudio(videoRef.current.currentTime);
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+        setIsPlaying(false);
     }
+    const rect = timelineRef.current.getBoundingClientRect();
+    const nt = Math.max(0, Math.min(((e.clientX - rect.left) / rect.width) * duration, duration));
+    
+    if (videoRef.current) { 
+       videoRef.current.currentTime = nt; 
+       setCurrentTime(nt);
+    }
+    setSelectedAiSegId(null);
+    setPlayheadDrag(true); // Initiate scrubbing
+  };
+
+  const handlePointerDownSegment = (e, s) => {
+    e.stopPropagation(); 
+    setSelectedAiSegId(s.id);
+    if (!timelineRef.current) return;
+    setDragState({ 
+      id: s.id, 
+      startX: e.clientX, 
+      startV: s.vStart,
+    });
+  };
+
+  const splitSegment = () => {
+    if (!selectedAiSegId) return;
+    const seg = aiSegments.find(s => s.id === selectedAiSegId);
+    if (!seg) return;
+    
+    const segDuration = seg.aEnd - seg.aStart;
+    const segEndV = seg.vStart + segDuration;
+
+    if (currentTime > seg.vStart && currentTime < segEndV) {
+      const splitPointA = seg.aStart + (currentTime - seg.vStart);
+
+      const seg1 = { ...seg, aEnd: splitPointA };
+      // seg2 precisely begins where seg1 ends
+      const seg2 = { id: Date.now(), aStart: splitPointA, aEnd: seg.aEnd, vStart: currentTime, track: seg.track };
+
+      setAiSegments(prev => [
+        ...prev.filter(s => s.id !== selectedAiSegId),
+        seg1,
+        seg2
+      ]);
+      setSelectedAiSegId(null);
+      setErrorMsg('');
+    } else {
+      setErrorMsg("ဖြတ်တောက်ရန် အဖြူ/အနီရောင်မျဉ်းသည် ရွေးချယ်ထားသော အဝါရောင် AI အသံပေါ်တွင် ရှိနေရပါမည်။");
+      setTimeout(() => setErrorMsg(''), 4000);
+    }
+  };
+
+  const deleteSegment = () => {
+    if (!selectedAiSegId) return;
+    setAiSegments(prev => prev.filter(s => s.id !== selectedAiSegId));
+    setSelectedAiSegId(null);
+  };
+
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    if (isPlaying) { videoRef.current.pause(); if(audioRef.current) audioRef.current.pause(); }
+    else { 
+      if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) videoRef.current.currentTime = trimStart;
+      syncAiAudio(videoRef.current.currentTime); videoRef.current.play().catch(() => {});
+    }
+    setIsPlaying(!isPlaying);
   };
 
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      const curr = videoRef.current.currentTime;
-      setCurrentTime(curr);
-      
-      if (isPlaying && !isRecording) {
-          if (curr >= trimEnd) {
-            videoRef.current.pause();
-            setIsPlaying(false);
-            videoRef.current.currentTime = trimStart;
-            syncAiAudio(trimStart);
-          } else if (curr < trimStart) {
-            videoRef.current.currentTime = trimStart;
-          }
-          
-          syncAiAudio(curr);
-      }
-
-      const isSlow = slowMoSegments.some(seg => curr >= seg.start && curr <= seg.end);
-      videoRef.current.playbackRate = isSlow ? 0.5 : 1.0;
+    if (!videoRef.current || playheadDrag) return;
+    const c = videoRef.current.currentTime; 
+    setCurrentTime(c);
+    if (isPlaying && !isRecording) {
+      if (c >= trimEnd) { videoRef.current.pause(); setIsPlaying(false); videoRef.current.currentTime = trimStart; syncAiAudio(trimStart); }
+      else if (c < trimStart) videoRef.current.currentTime = trimStart;
+      syncAiAudio(c);
     }
   };
 
-  const handleTimelineClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
-    const newTime = pos * duration;
-    
-    if(videoRef.current) {
-        videoRef.current.currentTime = newTime;
-        syncAiAudio(newTime);
-    }
-  };
-
-  const handleTrimStartChange = (e) => {
-    const newStart = Math.min(Number(e.target.value), trimEnd - 0.5);
-    setTrimStart(newStart);
-    if (videoRef.current) {
-      if (isPlaying) { videoRef.current.pause(); if(audioRef.current) audioRef.current.pause(); setIsPlaying(false); }
-      videoRef.current.currentTime = newStart;
-    }
-  };
-
-  const handleTrimEndChange = (e) => {
-    const newEnd = Math.max(Number(e.target.value), trimStart + 0.5);
-    setTrimEnd(newEnd);
-    if (videoRef.current) {
-      if (isPlaying) { videoRef.current.pause(); if(audioRef.current) audioRef.current.pause(); setIsPlaying(false); }
-      videoRef.current.currentTime = newEnd;
-    }
-  };
-
-  const addSlowMoSegment = () => {
-    if (!videoRef.current) return;
-    const start = Math.max(0, videoRef.current.currentTime - 1); 
-    const end = Math.min(duration, videoRef.current.currentTime + 2);
-    setSlowMoSegments([...slowMoSegments, { start, end, id: Date.now() }]);
-  };
-
-  const removeSegment = (id) => {
-    setSlowMoSegments(slowMoSegments.filter(s => s.id !== id));
-  };
-
-
-  // --- Export Logic ---
-  const stopExport = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop(); 
-    }
-    if (videoRef.current) {
-        videoRef.current.pause();
-        if (exportTimeUpdateHandlerRef.current) {
-            videoRef.current.removeEventListener('timeupdate', exportTimeUpdateHandlerRef.current);
-            exportTimeUpdateHandlerRef.current = null;
-        }
-    }
-    if (audioRef.current) audioRef.current.pause();
-    setIsRecording(false);
-    setIsPlaying(false);
+  const formatTime = (t) => {
+    if (isNaN(t) || t === Infinity || t === null) return "0:00.0";
+    return `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}.${Math.floor((t%1)*10)}`;
   };
 
   const startExport = async () => {
-    if (!videoRef.current || !audioUrl) return alert("Please generate AI Voiceover first.");
-
-    setIsRecording(true);
-    setRecordedVideo(null); 
-    const video = videoRef.current;
-    
-    video.currentTime = trimStart;
-    video.pause();
-    if(audioRef.current) audioRef.current.pause();
-
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioContext();
+    if (!videoRef.current || !audioUrl) return;
+    setIsRecording(true); setRecordedVideo(null); 
+    const video = videoRef.current; video.currentTime = trimStart; video.pause();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const dest = ctx.createMediaStreamDestination();
-
     try {
-      if (audioRef.current) {
-        const aiStream = audioRef.current.captureStream ? audioRef.current.captureStream() : audioRef.current.mozCaptureStream();
-        if (aiStream && aiStream.getAudioTracks().length > 0) ctx.createMediaStreamSource(aiStream).connect(dest);
-      }
-
-      const videoStream = video.captureStream ? video.captureStream() : video.mozCaptureStream();
-      if (videoStream && videoStream.getAudioTracks().length > 0) ctx.createMediaStreamSource(videoStream).connect(dest);
-
-      const combinedStream = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-      const options = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm' };
-
-      const recorder = new MediaRecorder(combinedStream, options);
-      mediaRecorderRef.current = recorder;
-      recordedChunksRef.current = [];
-
+      if (audioRef.current) ctx.createMediaStreamSource(audioRef.current.captureStream ? audioRef.current.captureStream() : audioRef.current.mozCaptureStream()).connect(dest);
+      ctx.createMediaStreamSource(video.captureStream ? video.captureStream() : video.mozCaptureStream()).connect(dest);
+      const combinedStream = new MediaStream([...video.captureStream().getVideoTracks(), ...dest.stream.getAudioTracks()]);
+      const recorder = new MediaRecorder(combinedStream);
+      mediaRecorderRef.current = recorder; recordedChunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
-
       recorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        setRecordedVideo({ url: URL.createObjectURL(blob), size: (blob.size / 1024 / 1024).toFixed(2), blob });
-        setIsRecording(false);
-        setIsPlaying(false);
-        ctx.close();
+        const b = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        setRecordedVideo({ url: URL.createObjectURL(b), size: (b.size / 1024 / 1024).toFixed(2), blob: b });
+        setIsRecording(false); ctx.close();
       };
-
-      const onExportTimeUpdate = () => {
-         const curr = video.currentTime;
-         if (curr >= trimEnd && recorder.state === 'recording') {
-             stopExport(); 
-             return;
-         }
-         
-         if (curr >= vidAudioTrimStart && curr <= vidAudioTrimEnd) {
-             video.muted = false; video.volume = videoVolume;
-         } else {
-             video.muted = true;
-         }
-
-         syncAiAudio(curr); 
-      };
-      
-      exportTimeUpdateHandlerRef.current = onExportTimeUpdate;
-      video.addEventListener('timeupdate', exportTimeUpdateHandlerRef.current);
-
-      recorder.start();
-      await video.play();
-      setIsPlaying(true);
-
-    } catch (e) {
-      alert("Capture failed.");
-      setIsRecording(false);
-    }
+      const checkEnd = () => { if (video.currentTime >= trimEnd) { video.removeEventListener('timeupdate', checkEnd); if (recorder.state === 'recording') recorder.stop(); } syncAiAudio(video.currentTime); };
+      video.addEventListener('timeupdate', checkEnd);
+      recorder.start(); await video.play(); setIsPlaying(true);
+    } catch (e) { setIsRecording(false); }
   };
 
-  const handleUniversalSave = async () => {
-    if (!recordedVideo) return;
-    const shareFile = new File([recordedVideo.blob], `Recap_Video.webm`, { type: 'video/webm' });
-    if (navigator.canShare && navigator.share) {
-      try { await navigator.share({ files: [shareFile], title: 'AI Video' }); return; } catch (err) {}
-    }
-    const a = document.createElement('a'); a.href = recordedVideo.url; a.download = `Recap_Video.webm`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  };
-
-  const handleAudioDownload = () => {
-    if (!audioUrl) return;
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', audioUrl, true);
-    xhr.responseType = 'blob';
-    xhr.onload = function() {
-        const url = window.URL.createObjectURL(this.response);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `Audio_Narration_${selectedVoice}_${Date.now()}.wav`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        window.URL.revokeObjectURL(url);
-    };
-    xhr.send();
-  };
-
-  const canSplit = aiSegments.some(s => currentTime >= s.vStart && currentTime < s.vStart + (s.aEnd - s.aStart));
+  const maxTrack = aiSegments.length > 0 ? Math.max(...aiSegments.map(s => s.track || 0)) : 0;
+  const numTracks = Math.max(3, maxTrack + 2); 
 
   return (
     <>
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(23, 23, 23, 0.5); border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(234, 179, 8, 0.4); border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(234, 179, 8, 0.8); }
-        
-        .range-slider { -webkit-appearance: none; background: transparent; }
-        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #eab308; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
-        .range-slider.blue-slider::-webkit-slider-thumb { background: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        .range-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #262626; border-radius: 2px; }
+        body { margin: 0; background: #0a0a0a; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(234, 179, 8, 0.4); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-corner { background: transparent; }
+        .range-slider { -webkit-appearance: none; background: transparent; width: 100%; height: 24px; }
+        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #eab308; cursor: pointer; margin-top: -6px; border: 2px solid black; }
+        .range-slider::-webkit-slider-runnable-track { height: 4px; background: #333; border-radius: 2px; }
+        .timeline-wrapper { touch-action: none; user-select: none; }
       `}</style>
 
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans pb-24 relative selection:bg-yellow-500/30">
-        
-        {/* Header - Luxury Gold & Black */}
-        <div className="bg-black border-b border-yellow-900/30 p-4 sticky top-0 z-[60] flex justify-between items-center shadow-lg shadow-yellow-900/10">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 p-2 rounded-lg shadow-md shadow-yellow-500/20">
-              <Film size={20} className="text-black" />
-            </div>
-            <h1 className="font-bold text-lg hidden md:block text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500">
-              Premium AI Studio
-            </h1>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowSettings(true)} className="p-2.5 bg-neutral-900 border border-neutral-800 rounded-full text-neutral-400 hover:text-yellow-500 hover:border-yellow-500/50 transition-all shadow-sm">
-              <Settings size={18} />
-            </button>
+      {/* Hidden Elements */}
+      <input type="file" ref={fileInputRef} accept="video/*" className="hidden" onChange={handleFileChange} />
+      <div className="hidden"><audio ref={audioRef} src={audioUrl || ''} preload="auto" /></div>
 
+      <div className="min-h-screen lg:h-screen flex flex-col bg-neutral-950 text-neutral-100 font-sans selection:bg-yellow-500/30 overflow-x-hidden lg:overflow-hidden">
+        
+        {/* HEADER */}
+        <header className="flex-none bg-black/90 backdrop-blur-md border-b border-yellow-900/30 p-4 flex justify-between items-center shadow-lg z-50 sticky top-0">
+          <div className="flex items-center gap-2">
+            <div className="bg-yellow-500 p-1.5 rounded-lg shadow-lg"><Film size={18} className="text-black" /></div>
+            <h1 className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500 tracking-tight">Premium AI Studio</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowSettings(true)} className="p-2 rounded-full bg-neutral-900/50 text-neutral-400 hover:text-yellow-500 transition-all border border-neutral-800"><Settings size={20} /></button>
             {videoUrl && (
-              <button 
-                onClick={isRecording ? stopExport : startExport}
-                disabled={!isRecording && !audioUrl}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all duration-300 ${
-                  isRecording 
-                  ? 'bg-red-600 hover:bg-red-700 text-white border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.5)] active:scale-95' 
-                  : !audioUrl 
-                    ? 'bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black shadow-lg shadow-yellow-500/20 active:scale-95'
-                }`}
-              >
-                {isRecording ? <><div className="w-2.5 h-2.5 bg-white rounded-[3px] animate-pulse" /> ရပ်မည် (Stop)</> : <><Save size={16} /> Render Video</>}
+              <button onClick={() => isRecording ? mediaRecorderRef.current?.stop() : startExport()} disabled={!isRecording && !audioUrl} className={`px-5 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isRecording ? 'bg-red-600 animate-pulse text-white' : 'bg-yellow-500 text-black hover:brightness-110 shadow-lg'}`}>
+                {isRecording ? <><Square size={12} fill="white" /> ရပ်မည်</> : <><Save size={14} /> ထုတ်ယူမည်</>}
               </button>
             )}
           </div>
-        </div>
+        </header>
 
-        <div className="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
+        {/* Error Toast Message */}
+        {errorMsg && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-red-950/90 border border-red-500 text-red-200 px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-[200] flex items-center gap-2 animate-in slide-in-from-top-4 fade-in w-[90%] md:w-auto text-center">
+            <XCircle size={16} className="text-red-500 shrink-0"/> {errorMsg}
+          </div>
+        )}
+
+        {/* MAIN WORKSPACE */}
+        <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 overflow-y-auto lg:overflow-hidden">
           
-          {/* Left Column: Video Player & Editor Tools (STICKY FIX) */}
-          <div className="lg:col-span-8 space-y-4 lg:sticky lg:top-[88px] self-start z-[40]">
+          {/* LEFT COLUMN: PLAYER & TIMELINE */}
+          <div className="lg:w-2/3 flex flex-col lg:h-full gap-4 relative shrink-0">
             
-            {/* Main Video Area (Sticky on Mobile & Desktop) */}
-            <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl shadow-black border border-neutral-800 aspect-video group sticky top-[76px] z-[50] lg:static">
+            {/* Video Player Box */}
+            <div className="w-full relative bg-black rounded-2xl border border-neutral-800 shadow-2xl group flex items-center justify-center overflow-hidden min-h-[250px] h-[45vh] lg:h-auto lg:max-h-none lg:flex-1">
               {!videoUrl ? (
-                <div 
-                  onClick={() => fileInputRef.current.click()}
-                  className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-900 transition-colors"
-                >
-                  <div className="bg-yellow-500/10 p-4 rounded-full mb-4 group-hover:bg-yellow-500/20 transition-colors">
-                    <Upload size={40} className="text-yellow-600" />
-                  </div>
-                  <p className="text-yellow-500/80 font-medium">Click to Upload Video</p>
+                <div onClick={() => fileInputRef.current.click()} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-900/50 transition-colors z-10">
+                  <div className="bg-yellow-500/10 p-6 rounded-full mb-4 transition-all"><Upload size={40} className="text-yellow-500" /></div>
+                  <p className="text-yellow-500/70 text-sm font-medium">ဗီဒီယို တင်ပါ</p>
                 </div>
               ) : (
                 <>
                   <video 
-                    ref={videoRef}
-                    src={videoUrl}
-                    className="w-full h-full object-contain"
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={(e) => {
-                      setDuration(e.target.duration);
-                      setTrimEnd(e.target.duration);
-                      setTrimStart(0);
-                      setVidAudioTrimEnd(e.target.duration);
-                    }}
+                    ref={videoRef} 
+                    src={videoUrl} 
+                    className="w-full h-full object-contain" 
+                    onTimeUpdate={handleTimeUpdate} 
                     crossOrigin="anonymous" 
+                    onLoadedMetadata={(e) => { 
+                      setDuration(e.target.duration); 
+                      setTrimEnd(e.target.duration); 
+                      setVidAudioTrimEnd(e.target.duration); 
+                    }} 
                   />
-                  
-                  <div className="absolute top-4 left-4 z-20">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); fileInputRef.current.click(); }}
-                      disabled={isRecording}
-                      className="bg-black/60 hover:bg-black/90 text-white py-2 px-3 rounded-xl backdrop-blur-md transition-all border border-neutral-700 hover:border-yellow-500 flex items-center gap-2 text-xs font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <RefreshCw size={14} className={isRecording ? "text-neutral-500" : "text-yellow-500"} /> ဗီဒီယိုပြောင်းရန်
+                  <button onClick={() => fileInputRef.current.click()} className="absolute top-3 left-3 bg-black/60 p-2 rounded-xl border border-neutral-700 text-[10px] font-bold flex items-center gap-2 hover:bg-black text-neutral-300 z-20">
+                    <RefreshCw size={12} className="text-yellow-500" /> ပြောင်းမည်
+                  </button>
+                  {/* Play Overlay */}
+                  <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <button onClick={togglePlay} className="bg-yellow-500 text-black p-3 rounded-full hover:scale-105 transition-transform shadow-lg">
+                      {isPlaying ? <Pause size={18} fill="black" /> : <Play size={18} fill="black" />}
                     </button>
-                  </div>
-
-                  {videoRef.current && videoRef.current.playbackRate < 1 && (
-                      <div className="absolute top-4 right-4 bg-yellow-500/90 text-black px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-pulse shadow-lg shadow-yellow-500/20 border border-yellow-400 z-20">
-                          <Zap size={12} fill="currentColor" /> Slow Motion
-                      </div>
-                  )}
-                  
-                  {isRecording && (
-                      <div className="absolute top-4 right-4 bg-red-600/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.8)] border border-red-400 z-20">
-                          <div className="w-2 h-2 rounded-full bg-white animate-ping" /> Rendering...
-                      </div>
-                  )}
-
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                    {!isPlaying && !isRecording && videoUrl && (
-                      <div className="bg-black/60 p-4 rounded-full backdrop-blur-md shadow-2xl border border-white/10">
-                        <Play size={36} className="text-yellow-500 ml-1" fill="currentColor" />
-                      </div>
-                    )}
+                    <div className="bg-black/80 px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider border border-neutral-800 text-yellow-500">
+                      {formatTime(currentTime)} / {formatTime(duration)}
+                    </div>
                   </div>
                 </>
               )}
+              {loading && (
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-3 z-50 animate-in fade-in">
+                  <Loader2 className="animate-spin text-yellow-500" size={40} />
+                  <p className="text-yellow-500 font-bold text-sm tracking-widest uppercase">{progress}</p>
+                </div>
+              )}
             </div>
 
-            {/* Editor Controls Tab System */}
-            {videoUrl && (
-              <div className="bg-neutral-900 p-4 rounded-2xl border border-neutral-800 shadow-xl space-y-5 relative z-[30]">
+            {/* Timeline Section (Multi-Track) */}
+            <div className="flex-none bg-neutral-950 pt-2 pb-2">
+              <div className="flex justify-between items-center mb-2 h-8">
+                 <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+                   <Layers size={14} /> Multi-Track Timeline
+                 </span>
+                 {selectedAiSegId && (
+                   <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
+                      <button onClick={splitSegment} className="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-neutral-700">
+                         <Scissors size={14} className="text-yellow-500"/> ဖြတ်မည်
+                      </button>
+                      <button onClick={deleteSegment} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-red-500/30">
+                         <Trash size={14}/> ဖျက်မည်
+                      </button>
+                   </div>
+                 )}
+              </div>
+
+              {/* Scrollable Timeline Container */}
+              <div className="relative bg-neutral-900 rounded-xl border border-neutral-800 shadow-lg overflow-hidden flex">
                 
-                {/* Visual Timeline Header */}
-                <div className="relative h-[60px] bg-black rounded-lg overflow-hidden cursor-pointer border border-neutral-800"
-                    onClick={handleTimelineClick}
-                >
-                  {/* Slow Mo Segments */}
-                  {slowMoSegments.map(seg => (
-                    <div 
-                      key={seg.id}
-                      className="absolute top-0 bottom-0 bg-neutral-500/20 border-l border-r border-neutral-500/30"
-                      style={{ left: `${(seg.start / duration) * 100}%`, width: `${((seg.end - seg.start) / duration) * 100}%` }}
-                    />
+                {/* Fixed Track Headers (Left Side) */}
+                <div className="w-[40px] bg-black/50 border-r border-neutral-800 flex flex-col z-10 hidden sm:flex">
+                  {Array.from({ length: numTracks }).map((_, i) => (
+                    <div key={i} className="flex-none flex items-center justify-center text-[9px] font-bold text-neutral-600 border-b border-neutral-800/50" style={{ height: TRACK_HEIGHT }}>
+                      L{i+1}
+                    </div>
                   ))}
-
-                  <div className="absolute top-0 bottom-0 left-0 bg-neutral-900/80 backdrop-blur-[1px] z-10 transition-all" style={{ width: `${(trimStart / duration) * 100}%` }} />
-                  <div className="absolute top-0 bottom-0 right-0 bg-neutral-900/80 backdrop-blur-[1px] z-10 transition-all" style={{ width: `${(1 - trimEnd / duration) * 100}%` }} />
-                  <div className="absolute top-0 bottom-0 w-[2px] bg-neutral-400 z-20" style={{ left: `${(trimStart / duration) * 100}%` }} />
-                  <div className="absolute top-0 bottom-0 w-[2px] bg-neutral-400 z-20" style={{ left: `${(trimEnd / duration) * 100}%` }} />
-
-                  {/* Video Sound Audio Track Bar (Blue) */}
-                  <div className="absolute top-[10px] h-[6px] bg-blue-500 z-20 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)]" 
-                       style={{ left: `${(vidAudioTrimStart / duration) * 100}%`, width: `${((vidAudioTrimEnd - vidAudioTrimStart) / duration) * 100}%` }} 
-                  />
-
-                  {/* AI Audio Dynamic Segments (Yellow) */}
-                  {aiSegments.map((seg) => {
-                     const segWidth = ((seg.aEnd - seg.aStart) / duration) * 100;
-                     const segLeft = (seg.vStart / duration) * 100;
-                     if (isNaN(segWidth) || isNaN(segLeft)) return null;
-
-                     return (
-                         <div key={seg.id} className="absolute bottom-[10px] h-[6px] bg-yellow-500 z-20 rounded-full shadow-[0_0_8px_rgba(234,179,8,0.6)] border border-yellow-300/50"
-                              style={{ left: `${segLeft}%`, width: `${segWidth}%` }}
-                         />
-                     );
-                  })}
-
-                  <div className="absolute top-0 bottom-0 w-1 bg-white z-30 shadow-[0_0_10px_rgba(255,255,255,0.8)]" style={{ left: `${(currentTime / duration) * 100}%` }} />
                 </div>
 
-                {/* Tabs & Main Play Controls */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="flex items-center gap-4">
-                    <button onClick={togglePlay} disabled={isRecording} className="p-3 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-full text-black hover:scale-105 shadow-lg shadow-yellow-500/20 disabled:opacity-50">
-                      {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
-                    </button>
-                    <span className="font-mono text-sm text-yellow-500/80 tracking-wider">
-                      {formatTime(currentTime)} <span className="text-neutral-600">/</span> {formatTime(duration)}
-                    </span>
-                  </div>
+                {/* Main Scrollable Track Area */}
+                <div 
+                  ref={timelineRef} 
+                  onPointerDown={handleTimelinePointerDown}
+                  className="flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar touch-none h-[140px]"
+                >
+                  {!videoUrl && <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-600">No media loaded</div>}
+                  
+                  {videoUrl && duration > 0 && (
+                    <div className="relative w-full" style={{ height: numTracks * TRACK_HEIGHT }}>
+                      
+                      {/* Background Track Lines */}
+                      {Array.from({ length: numTracks }).map((_, i) => (
+                        <div key={i} className="absolute w-full border-b border-neutral-800/30 pointer-events-none" style={{ top: i * TRACK_HEIGHT, height: TRACK_HEIGHT }} />
+                      ))}
 
-                  <div className="flex bg-black p-1 rounded-xl border border-neutral-800 w-full sm:w-auto overflow-x-auto custom-scrollbar">
-                    <button onClick={() => setActiveTab('trim')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 flex-1 sm:flex-none ${activeTab === 'trim' ? 'bg-yellow-500/20 text-yellow-500 shadow-inner' : 'text-neutral-500'}`}><Film size={16}/> Video Trim</button>
-                    <button onClick={() => setActiveTab('audio')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 flex-1 sm:flex-none ${activeTab === 'audio' ? 'bg-yellow-500/20 text-yellow-500 shadow-inner' : 'text-neutral-500'}`}><Waves size={16}/> Audio & Sync</button>
-                    <button onClick={() => setActiveTab('fx')} className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 flex-1 sm:flex-none ${activeTab === 'fx' ? 'bg-yellow-500/20 text-yellow-500 shadow-inner' : 'text-neutral-500'}`}><Zap size={16}/> Speed FX</button>
-                  </div>
+                      {/* Trim Mask Overlay */}
+                      <div className="absolute top-0 bottom-0 left-0 bg-black/70 z-0 pointer-events-none" style={{ width: toPct(trimStart, duration) }} />
+                      <div className="absolute top-0 bottom-0 right-0 bg-black/70 z-0 pointer-events-none" style={{ width: toPct(duration - trimEnd, duration) }} />
+
+                      {/* AI Audio Segments */}
+                      {aiSegments.map(s => {
+                        const isS = selectedAiSegId === s.id;
+                        const tIndex = s.track || 0;
+                        return (
+                          <div 
+                            key={s.id} 
+                            onPointerDown={(e) => handlePointerDownSegment(e, s)}
+                            className={`absolute rounded-md border transition-all flex items-center justify-center cursor-grab active:cursor-grabbing ${isS ? 'bg-yellow-400 border-white z-50 shadow-[0_0_20px_rgba(234,179,8,0.8)] scale-y-105' : 'bg-yellow-600 border-yellow-700 z-10'}`}
+                            style={{ 
+                              left: toPct(s.vStart, duration), 
+                              width: toPct(s.aEnd - s.aStart, duration),
+                              top: tIndex * TRACK_HEIGHT + 6, 
+                              height: TRACK_HEIGHT - 12 
+                            }}
+                          >
+                            <Waves size={14} className="text-black opacity-80" />
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Playhead (Draggable) */}
+                      <div 
+                        className="absolute top-0 bottom-0 w-[2px] bg-white z-[60] pointer-events-none shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-75" 
+                        style={{ left: toPct(currentTime, duration) }}
+                      >
+                         <div 
+                            className="absolute -top-[10px] -translate-x-1/2 w-8 h-8 flex flex-col items-center justify-start pointer-events-auto cursor-ew-resize group"
+                            onPointerDown={(e) => {
+                               e.stopPropagation();
+                               setPlayheadDrag(true);
+                            }}
+                         >
+                            <div className="w-4 h-5 bg-white rounded-sm shadow-md flex items-center justify-center border border-neutral-300 group-hover:scale-110 transition-transform">
+                              <div className="w-[2px] h-3 bg-red-500 rounded-full"></div>
+                            </div>
+                            <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white mt-[1px]"></div>
+                         </div>
+                         <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-red-500 h-full"></div>
+                      </div>
+
+                    </div>
+                  )}
                 </div>
+              </div>
+            </div>
 
-                {/* Tab Content Area */}
-                <div className="pt-2">
-                    
-                    {/* VIDEO TRIM TAB */}
-                    {activeTab === 'trim' && (
-                        <div className="bg-black p-5 rounded-xl border border-neutral-800/50 space-y-4 animate-in fade-in">
-                            <h4 className="text-neutral-400 font-bold text-xs flex items-center gap-2 tracking-widest mb-2"><Film size={14} /> VIDEO VISUAL TRIM</h4>
-                            <p className="text-xs text-neutral-500 mb-4">Video ၏ အစနှင့် အဆုံးကို သတ်မှတ်ပါ။ AI သည် သင်ရွေးချယ်ထားသော အပိုင်းကိုသာ အာရုံစိုက်၍ ဇာတ်ညွှန်းရေးပါမည်။</p>
-                            <div className="flex items-center gap-4">
-                                <span className="text-xs font-bold text-neutral-500 w-12">START</span>
-                                <input type="range" min="0" max={duration} step="0.1" value={trimStart} onChange={handleTrimStartChange} className="w-full range-slider" />
-                                <span className="text-xs font-mono text-neutral-400 bg-neutral-900 px-2 py-1.5 rounded-md border border-neutral-800 w-16 text-center">{formatTime(trimStart)}</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <span className="text-xs font-bold text-neutral-500 w-12">END</span>
-                                <input type="range" min="0" max={duration} step="0.1" value={trimEnd} onChange={handleTrimEndChange} className="w-full range-slider" />
-                                <span className="text-xs font-mono text-neutral-400 bg-neutral-900 px-2 py-1.5 rounded-md border border-neutral-800 w-16 text-center">{formatTime(trimEnd)}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* AUDIO & SYNC TAB */}
-                    {activeTab === 'audio' && (
-                        <div className="space-y-4 animate-in fade-in">
-                            <div className="bg-black p-5 rounded-xl border border-neutral-800/50 flex gap-6">
-                                <div className="flex-1 flex items-center gap-4">
-                                    <Volume2 size={16} className="text-blue-500"/>
-                                    <input type="range" min="0" max="1" step="0.05" value={videoVolume} onChange={(e) => setVideoVolume(Number(e.target.value))} className="w-full range-slider blue-slider" />
-                                </div>
-                                <div className="flex-1 flex items-center gap-4">
-                                    <Mic2 size={16} className="text-yellow-500"/>
-                                    <input type="range" min="0" max="1" step="0.05" value={aiVolume} onChange={(e) => setAiVolume(Number(e.target.value))} className="w-full range-slider" />
-                                </div>
-                            </div>
-
-                            {/* AI Audio Sync Manager */}
-                            {audioUrl ? (
-                            <div className="bg-black p-5 rounded-xl border border-yellow-900/40 space-y-5 shadow-inner">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                                    <h4 className="text-yellow-500 font-bold text-xs flex items-center gap-2 tracking-widest">
-                                        <Scissors size={14} /> AI အသံ ဖြတ်တောက် / နေရာရွှေ့ရန်
-                                    </h4>
-                                    <button 
-                                        onClick={handleSplitAudio}
-                                        disabled={!canSplit}
-                                        className={`text-xs font-bold px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${canSplit ? 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-[0_0_10px_rgba(234,179,8,0.3)] active:scale-95' : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'}`}
-                                    >
-                                        <Scissors size={14} /> ယခုနေရာတွင် အသံဖြတ်မည် (Cut Here)
-                                    </button>
-                                </div>
-                                
-                                <p className="text-[11px] text-neutral-400 leading-relaxed bg-yellow-500/5 p-3 rounded-lg border border-yellow-500/10">
-                                    💡 <b>လုပ်ဆောင်နည်း:</b> Video ဖွင့်နေစဉ် အသံကို ဖြတ်လိုသည့်အချိန်ရောက်ပါက "Cut Here" ကိုနှိပ်ပါ။ ထို့နောက် ပိုင်းသွားသောအသံကို အောက်ပါ Slider ဖြင့် လိုချင်သည့်အချိန်ရောက်မှ စပြောရန် နောက်ဆုတ် (Delay) လုပ်နိုင်ပါသည်။
-                                </p>
-
-                                <div className="space-y-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                                    {aiSegments.map((seg, idx) => (
-                                        <div key={seg.id} className="bg-neutral-900 border border-neutral-800 p-4 rounded-xl flex flex-col gap-3 relative overflow-hidden group">
-                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500" />
-                                            <div className="flex justify-between items-center pl-2">
-                                                <span className="text-xs font-bold text-yellow-500">အသံ အပိုင်း ({idx + 1})</span>
-                                                <span className="text-[10px] text-neutral-500 font-mono">Length: {(seg.aEnd - seg.aStart).toFixed(1)}s</span>
-                                            </div>
-                                            <div className="flex items-center gap-3 pl-2">
-                                                <span className="text-[10px] font-bold text-neutral-400 whitespace-nowrap">စပြောမည့်အချိန်</span>
-                                                <input 
-                                                    type="range" min="0" max={duration} step="0.1" 
-                                                    value={seg.vStart} 
-                                                    onChange={(e) => updateSegmentVStart(seg.id, Number(e.target.value))} 
-                                                    className="w-full range-slider" 
-                                                />
-                                                <span className="text-xs font-mono text-yellow-400 bg-black px-2 py-1 rounded border border-neutral-800">
-                                                    {formatTime(seg.vStart)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            ) : (
-                                <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800 text-center text-neutral-500 text-xs">
-                                    AI အသံကို ဖြတ်တောက်ရန် အရင်ဆုံး Generate AI Voiceover ပြုလုပ်ပေးပါ။
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* FX TAB */}
-                    {activeTab === 'fx' && (
-                        <div className="bg-black p-4 rounded-xl border border-neutral-800/50 animate-in fade-in zoom-in-95 duration-200 space-y-4">
-                            <button onClick={addSlowMoSegment} className="w-full py-3 bg-neutral-900 border border-neutral-800 hover:border-yellow-600/50 text-sm text-yellow-500 font-medium flex items-center justify-center gap-2"><Clock size={16} /> Add Slow Motion at Playhead</button>
-                            {slowMoSegments.length > 0 && (
-                                <div className="flex flex-wrap gap-2 pt-2 border-t border-neutral-900">
-                                    {slowMoSegments.map(seg => (
-                                        <div key={seg.id} className="flex items-center gap-2 bg-yellow-500/10 text-yellow-500 px-3 py-1.5 rounded-md text-xs border border-yellow-500/20">
-                                            <span>Slow: {formatTime(seg.start)} - {formatTime(seg.end)}</span>
-                                            <button onClick={() => removeSegment(seg.id)} className="hover:text-red-400 p-0.5 rounded-full"><Trash2 size={12} /></button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
+            {/* Export Success Banner */}
+            {recordedVideo && (
+              <div className="absolute bottom-40 left-4 right-4 bg-yellow-500/10 backdrop-blur-md border border-yellow-500/50 rounded-2xl p-6 text-center animate-in slide-in-from-bottom-4 flex flex-col items-center z-[100] shadow-2xl">
+                <Check size={40} className="text-green-500 mb-2" />
+                <h3 className="font-bold text-lg text-yellow-500 mb-1">ဗီဒီယို ထုတ်ယူပြီးပါပြီ</h3>
+                <p className="text-sm text-neutral-300 mb-4 font-mono">Size: {recordedVideo.size} MB</p>
+                <div className="flex gap-3">
+                  <a href={recordedVideo.url} download="Premium_AI_Video.webm" className="bg-yellow-500 text-black px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-yellow-400 transition-colors shadow-lg">
+                    <Download size={16} /> Save to Device
+                  </a>
+                  <button onClick={() => setRecordedVideo(null)} className="px-4 py-2 rounded-full text-sm font-medium border border-neutral-600 hover:bg-neutral-800 transition-colors bg-black/50">
+                    Close
+                  </button>
                 </div>
               </div>
             )}
-
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="video/*" className="hidden" />
           </div>
 
-          {/* Right Column: AI Generation Tools */}
-          <div className="lg:col-span-4 space-y-6 flex flex-col z-20">
+          {/* RIGHT COLUMN: TABS */}
+          <div className="lg:w-1/3 bg-neutral-900 border border-neutral-800 rounded-2xl flex flex-col shadow-xl min-h-[500px] lg:min-h-0 lg:h-full overflow-hidden relative shrink-0">
+            
+            {/* Tab Headers */}
+            <div className="flex-none flex border-b border-neutral-800 bg-neutral-900 z-10">
+              {[
+                { id: 'script', icon: Mic2, label: 'AI Voice' },
+                { id: 'trim', icon: Scissors, label: 'Adjust' }
+              ].map(t => (
+                <button 
+                  key={t.id} 
+                  onClick={() => setActiveTab(t.id)}
+                  className={`flex-1 py-4 text-xs font-bold flex items-center justify-center gap-2 transition-all ${activeTab === t.id ? 'bg-neutral-800 text-yellow-500 border-b-2 border-yellow-500' : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/50'}`}
+                >
+                  <t.icon size={14} /> {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Body */}
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar pb-10">
               
-              {/* Voice Selection Panel */}
-              <div className="bg-neutral-900 p-6 rounded-2xl border border-yellow-900/30 shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 to-yellow-400 opacity-50"></div>
-                  <h3 className="font-bold text-yellow-500 mb-5 flex items-center gap-2 text-lg"><Music2 size={20} /> Voice Selection</h3>
-                  <div className="space-y-4">
-                      <div className="grid grid-cols-1 gap-2.5 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                          {VOICES.map(v => (
-                              <button key={v.id} onClick={() => setSelectedVoice(v.id)} className={`px-4 py-3 rounded-xl text-sm text-left flex justify-between items-center transition-all border ${selectedVoice === v.id ? 'bg-yellow-500/10 border-yellow-500 text-yellow-500 shadow-md shadow-yellow-500/5' : 'bg-black border-neutral-800 text-neutral-400 hover:border-yellow-900/50 hover:bg-neutral-950'}`}>
-                                  <div className="flex flex-col flex-grow"><span className="font-semibold">{v.name}</span><span className="text-xs opacity-70 mt-1">{v.desc}</span></div>
-                                  <div className="flex items-center gap-3">
-                                      <div onClick={(e) => handlePlayPreview(e, v)} className={`p-2 rounded-full transition-colors flex-shrink-0 border ${playingPreview === v.id ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' : 'bg-neutral-900 text-neutral-500 border-neutral-700 hover:text-yellow-500 hover:border-yellow-500/30'}`}>
-                                          {previewLoading === v.id ? <Loader2 size={16} className="animate-spin text-yellow-500" /> : playingPreview === v.id ? <Pause size={16} fill="currentColor" /> : <Volume2 size={16} />}
-                                      </div>
-                                      {selectedVoice === v.id && <div className="bg-yellow-500 text-black p-1 rounded-full flex-shrink-0"><Check size={14} strokeWidth={3} /></div>}
-                                  </div>
-                              </button>
-                          ))}
-                      </div>
-
-                      <button onClick={generateContent} disabled={!file || loading || isRecording} className={`w-full py-4 mt-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${!file || loading || isRecording ? 'bg-neutral-800 text-neutral-600 border border-neutral-700 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-black shadow-yellow-500/20 hover:scale-[1.02]'}`}>
-                          {loading ? <Loader2 size={18} className="animate-spin" /> : <Mic2 size={18} />}
-                          {loading ? 'Generating Magic...' : 'Generate AI Voiceover'}
-                      </button>
-                      {progress && <div className="mt-4 text-center"><p className="text-sm text-yellow-500 font-medium animate-pulse">{progress}</p></div>}
+              {/* SCRIPT TAB */}
+              {activeTab === 'script' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3 block">Voice Model</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {VOICES.map(v => (
+                        <button key={v.id} onClick={() => setSelectedVoice(v.id)}
+                          className={`p-3 rounded-xl border text-left flex flex-col gap-1 transition-all ${selectedVoice === v.id ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-500' : 'bg-black border-neutral-800 text-neutral-400 hover:border-neutral-700'}`}
+                        >
+                          <span className="text-sm font-bold">{v.name}</span>
+                          <span className="text-[10px] opacity-70">{v.desc}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-              </div>
 
-              {/* Script Panel */}
-              <div className="bg-neutral-900 p-6 rounded-2xl border border-yellow-900/30 shadow-xl flex-grow flex flex-col relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 to-yellow-400 opacity-50"></div>
-                  <h3 className="font-bold text-yellow-500 mb-4 flex items-center gap-2 text-lg"><FileVideo size={20} /> Generated Script & Errors</h3>
-                  <textarea value={script} onChange={(e) => setScript(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-4 text-sm text-neutral-300 flex-grow focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 resize-none custom-scrollbar min-h-[160px] transition-all" placeholder="AI generated script or Error Messages will appear here..."/>
-                  {audioUrl && (
-                      <div className="mt-5 flex justify-between items-center bg-yellow-500/10 p-4 rounded-xl border border-yellow-500/20">
-                          <span className="text-sm text-yellow-500 font-semibold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>Audio Ready</span>
-                          <button onClick={handleAudioDownload} className="text-neutral-300 hover:text-yellow-400 text-sm flex items-center gap-1.5 font-medium transition-colors bg-black px-3 py-1.5 rounded-lg border border-neutral-800 hover:border-yellow-500/50"><Download size={16}/> Download WAV</button>
-                      </div>
+                  <div className="bg-black border border-neutral-800 rounded-2xl p-4">
+                    <button 
+                      onClick={generateContent}
+                      disabled={!videoUrl || loading}
+                      className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 text-black py-3 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 transition-all"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} fill="black" />}
+                      {loading ? 'AI အလုပ်လုပ်နေသည်...' : 'AI ဖြင့် အသံအသစ်ဖန်တီးမည်'}
+                    </button>
+                    <p className="text-[10px] text-neutral-500 text-center mt-3">Selected timeline area will be sent to Gemini 2.5</p>
+                  </div>
+
+                  {script && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2">
+                      <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Generated Script</span>
+                      </label>
+                      <textarea 
+                        value={script} 
+                        onChange={(e) => setScript(e.target.value)}
+                        className="w-full h-48 bg-black border border-neutral-800 rounded-xl p-3 text-sm text-neutral-300 focus:outline-none focus:border-yellow-500/50 custom-scrollbar resize-none leading-relaxed"
+                      />
+                    </div>
                   )}
-              </div>
+                </div>
+              )}
+
+              {/* TRIM & ADJUST TAB */}
+              {activeTab === 'trim' && (
+                <div className="space-y-8">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <Film size={14} className="text-yellow-500" /> Video Trim (AI Focus)
+                    </label>
+                    <div className="px-2">
+                      <input type="range" min="0" max={duration} step="0.1" value={trimStart} 
+                        onChange={(e) => { const val = parseFloat(e.target.value); if(val < trimEnd) { setTrimStart(val); if(videoRef.current) videoRef.current.currentTime = val; } }}
+                        className="range-slider mb-2" 
+                      />
+                      <input type="range" min="0" max={duration} step="0.1" value={trimEnd} 
+                        onChange={(e) => { const val = parseFloat(e.target.value); if(val > trimStart) setTrimEnd(val); }}
+                        className="range-slider" 
+                      />
+                      <div className="flex justify-between text-xs text-neutral-500 mt-2 font-mono">
+                        <span>{formatTime(trimStart)}</span>
+                        <span>{formatTime(trimEnd)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-neutral-800">
+                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <Volume2 size={14} className="text-blue-500" /> Original Audio Region
+                    </label>
+                    <div className="px-2">
+                      <input type="range" min="0" max={duration} step="0.1" value={vidAudioTrimStart} 
+                        onChange={(e) => { const val = parseFloat(e.target.value); if(val < vidAudioTrimEnd) setVidAudioTrimStart(val); }}
+                        className="range-slider mb-2" 
+                      />
+                      <input type="range" min="0" max={duration} step="0.1" value={vidAudioTrimEnd} 
+                        onChange={(e) => { const val = parseFloat(e.target.value); if(val > vidAudioTrimStart) setVidAudioTrimEnd(val); }}
+                        className="range-slider" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-neutral-800 space-y-5">
+                     <div>
+                        <div className="flex justify-between text-xs font-bold mb-2">
+                          <span className="text-blue-500 flex items-center gap-2"><Volume2 size={12}/> Original Volume</span>
+                          <span className="text-neutral-500">{Math.round(videoVolume * 100)}%</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.05" value={videoVolume} onChange={(e) => setVideoVolume(parseFloat(e.target.value))} className="w-full accent-blue-500" />
+                     </div>
+                     <div>
+                        <div className="flex justify-between text-xs font-bold mb-2">
+                          <span className="text-yellow-500 flex items-center gap-2"><Mic2 size={12}/> AI Voice Volume</span>
+                          <span className="text-neutral-500">{Math.round(aiVolume * 100)}%</span>
+                        </div>
+                        <input type="range" min="0" max="1" step="0.05" value={aiVolume} onChange={(e) => setAiVolume(parseFloat(e.target.value))} className="w-full accent-yellow-500" />
+                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </main>
 
-        {/* Hidden Audio Elements */}
-        {/* Important: Do not render <audio> tag if no URL, to prevent load errors */}
-        {audioUrl && (
-            <audio 
-              ref={audioRef} 
-              src={audioUrl} 
-            />
-        )}
-        <audio ref={previewAudioRef} />
-
-        {/* Recorded Video Modal / Success Screen */}
-        {recordedVideo && (
-          <div className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4 backdrop-blur-xl">
-              <div className="bg-neutral-900 border border-yellow-900/50 rounded-3xl max-w-2xl w-full p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-6 border-b border-neutral-800 pb-5">
-                      <h2 className="text-2xl font-bold text-white flex items-center gap-3"><span className="bg-yellow-500 text-black p-2 rounded-full shadow-lg shadow-yellow-500/20"><Check size={24} strokeWidth={3} /></span> Render Complete!</h2>
-                      <button onClick={() => setRecordedVideo(null)} className="text-neutral-500 hover:text-yellow-500 transition-colors bg-black p-2 rounded-full border border-neutral-800 hover:border-yellow-500/50"><XCircle size={20} /></button>
-                  </div>
-                  <div className="bg-black rounded-2xl overflow-hidden mb-8 border border-neutral-800 shadow-inner">
-                    <video src={recordedVideo.url} controls className="w-full aspect-video object-contain" />
-                  </div>
-                  <div className="flex justify-between items-center bg-black p-5 rounded-2xl border border-neutral-800">
-                      <div className="flex flex-col"><span className="text-neutral-500 text-xs font-bold uppercase tracking-widest mb-1">File Size</span><span className="text-yellow-500 font-medium text-lg">{recordedVideo.size} MB</span></div>
-                      <button onClick={handleUniversalSave} className="flex items-center gap-2 bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-black px-8 py-4 rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20 hover:scale-105 active:scale-95 text-lg"><Share2 size={20} /> Save & Share </button>
-                  </div>
-              </div>
-          </div>
-        )}
-
-        {/* API Settings Modal */}
+        {/* SETTINGS MODAL */}
         {showSettings && (
-          <div className="fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4 backdrop-blur-xl">
-              <div className="bg-neutral-900 border border-yellow-900/50 rounded-3xl max-w-md w-full p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
-                  <div className="flex justify-between items-center mb-6 border-b border-neutral-800 pb-5">
-                      <h2 className="text-xl font-bold text-yellow-500 flex items-center gap-3"><Settings size={24} /> API Settings</h2>
-                      <button onClick={() => setShowSettings(false)} className="text-neutral-500 hover:text-yellow-500 transition-colors bg-black p-2 rounded-full border border-neutral-800 hover:border-yellow-500/50"><XCircle size={20} /></button>
-                  </div>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-300 mb-2 flex items-center gap-2"><Key size={16} className="text-yellow-500" /> Google Gemini API Key</label>
-                      <input type="password" value={customApiKey} onChange={(e) => setCustomApiKey(e.target.value)} placeholder="AIzaSy..." className="w-full bg-black border border-neutral-800 rounded-xl p-3.5 text-neutral-200 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all"/>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-neutral-300 mb-2 flex items-center gap-2"><Zap size={16} className="text-yellow-500" /> AI Video Model</label>
-                      <select value={activeModel} onChange={(e) => setActiveModel(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3.5 text-yellow-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all appearance-none cursor-pointer">
-                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast & Recommended)</option>
-                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (High Quality)</option>
-                        <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                      </select>
-                    </div>
-                    <button onClick={() => setShowSettings(false)} className="w-full bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-black py-3.5 rounded-xl font-bold transition-all shadow-lg shadow-yellow-500/20 active:scale-[0.98]">Save & Close</button>
-                  </div>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl shadow-black">
+              <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-black/50">
+                <h3 className="font-bold text-lg flex items-center gap-2"><Settings className="text-yellow-500" /> Settings</h3>
+                <button onClick={() => setShowSettings(false)} className="text-neutral-500 hover:text-white transition-colors"><XCircle size={20}/></button>
               </div>
+              <div className="p-6 space-y-5">
+                <div>
+                  <label className="text-sm font-bold text-neutral-300 mb-2 block flex items-center gap-2">
+                    <Key size={14} className="text-yellow-500" /> API Key
+                  </label>
+                  <input type="password" placeholder="Enter Gemini API Key..." value={customApiKey} onChange={(e) => setCustomApiKey(e.target.value)}
+                    className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-yellow-500/50 transition-colors"
+                  />
+                  <p className="text-[10px] text-neutral-500 mt-2">Get a key from Google AI Studio. Stored locally.</p>
+                </div>
+                
+                <div className="bg-black/50 border border-neutral-800 rounded-xl p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-neutral-300">Model Status</span>
+                    {modelStatus === 'searching' && <Loader2 size={14} className="animate-spin text-yellow-500" />}
+                    {modelStatus === 'found' && <Check size={14} className="text-green-500" />}
+                    {modelStatus === 'error' && <XCircle size={14} className="text-red-500" />}
+                  </div>
+                  <div className="text-xs text-neutral-500 font-mono break-all bg-black p-2 rounded-lg border border-neutral-800/50">
+                    {activeModel}
+                  </div>
+                  {modelStatus === 'error' && customApiKey && (
+                    <p className="text-xs text-red-400 mt-2">Invalid Key or Gemini 2.5 is not available.</p>
+                  )}
+                </div>
+                
+                <button onClick={() => setShowSettings(false)} className="w-full bg-neutral-100 text-black py-3 rounded-xl font-bold text-sm hover:bg-white transition-colors">
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         )}
+
       </div>
     </>
   );
 }
-
-
