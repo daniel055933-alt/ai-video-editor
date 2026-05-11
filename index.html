@@ -1,795 +1,892 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
-  Upload, Download, Play, Pause, Loader2, Film, Mic2, Settings,
-  Save, Zap, Check, XCircle, Volume2, Key, Scissors, RefreshCw, Waves, Square, Trash, Layers
-} from 'lucide-react';
-
-const apiKey = ""; // Canvas runtime injects key here
-const INITIAL_MODEL = "gemini-2.5-flash-preview-09-2025";
-const API_KEY_ENV = apiKey; 
-
-const VOICES = [
-  { id: 'Charon', gender: 'Male', name: 'Charon', desc: 'ရင့်ကျက်တည်ငြိမ် (Default)' },
-  { id: 'Kore', gender: 'Female', name: 'Kore', desc: 'ပရော်ဖက်ရှင်နယ် (Female)' },
-  { id: 'Fenrir', gender: 'Male', name: 'Fenrir', desc: 'သြဇာရှိသော (Male)' },
-  { id: 'Puck', gender: 'Male', name: 'Puck', desc: 'သွက်လက်ပေါ့ပါး (Male)' },
-  { id: 'Zephyr', gender: 'Female', name: 'Zephyr', desc: 'နူးညံ့သိမ်မွေ့ (Female)' },
-];
-
-const TRACK_HEIGHT = 46; 
-
-const translateApiError = (err) => {
-  const m = (err || "").toString().toLowerCase();
-  if (m.includes('quota') || m.includes('429')) return "⚠️ API အသုံးပြုမှု အကြိမ်ရေ ပြည့်သွားပါပြီ။ ၁ မိနစ်ခန့် စောင့်ပေးပါ။";
-  if (m.includes('key not valid')) return "⚠️ API Key မှားယွင်းနေပါသည်။ Settings တွင် ပြန်စစ်ပါ။";
-  if (m.includes('safety')) return "⚠️ Safety Filter ကြောင့် အသံထုတ်မရပါ။ စကားလုံးအသုံးအနှုန်းကို အနည်းငယ် ပြင်ကြည့်ပါ။";
-  if (m.includes('not found')) return "⚠️ Gemini 2.5 ကို သင့် Key ဖြင့် အသုံးပြုခွင့် မရသေးပါ။";
-  return `⚠️ အမှားအယွင်း: ${err}`;
-};
-
-export default function App() {
-  const [file, setFile] = useState(null);
-  const [videoUrl, setVideoUrl] = useState(null);
-  const [script, setScript] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioUrl, setAudioUrl] = useState(null);
-  const [progress, setProgress] = useState('');
-  const [selectedVoice, setSelectedVoice] = useState('Charon');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  // Auto Discovery (2.5 Only)
-  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('ai_v_key_v2.5_only') || '');
-  const [activeModel, setActiveModel] = useState(() => localStorage.getItem('ai_v_model_v2.5_only') || INITIAL_MODEL);
-  const [modelStatus, setModelStatus] = useState('idle');
-  const [showSettings, setShowSettings] = useState(false);
-
-  // Editor State
-  const [activeTab, setActiveTab] = useState('script'); 
-  const [trimStart, setTrimStart] = useState(0);
-  const [trimEnd, setTrimEnd] = useState(10);
-  const [vidAudioTrimStart, setVidAudioTrimStart] = useState(0);
-  const [vidAudioTrimEnd, setVidAudioTrimEnd] = useState(10);
-  
-  // AI Segment Structure: { id, aStart, aEnd, vStart, track }
-  const [aiSegments, setAiSegments] = useState([]); 
-  const [selectedAiSegId, setSelectedAiSegId] = useState(null);
-  
-  // Dragging States
-  const [dragState, setDragState] = useState(null); // For AI Audio Segments
-  const [playheadDrag, setPlayheadDrag] = useState(false); // For Playhead (Red Line)
-  
-  const [videoVolume, setVideoVolume] = useState(0.5);
-  const [aiVolume, setAiVolume] = useState(1.0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedVideo, setRecordedVideo] = useState(null);
-
-  const videoRef = useRef(null);
-  const audioRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const timelineRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const recordedChunksRef = useRef([]);
-
-  const activeKey = customApiKey.trim() || API_KEY_ENV;
-
-  const discoverModel = useCallback(async (key) => {
-    if (!key) return;
-    setModelStatus('searching');
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error("Invalid Key");
-      
-      const allNames = (data.models || []).map(m => m.name);
-      const priorities = ["models/gemini-2.5-flash-preview-09-2025", "models/gemini-2.5-flash", "models/gemini-2.5-pro"];
-      
-      let found = null;
-      for (const t of priorities) {
-          if (allNames.includes(t)) {
-              found = t.replace("models/", "");
-              break;
-          }
-      }
-
-      if (found) {
-        setActiveModel(found);
-        localStorage.setItem('ai_v_model_v2.5_only', found);
-        setModelStatus('found');
-      } else {
-        setActiveModel(INITIAL_MODEL);
-        setModelStatus('error');
-      }
-    } catch (e) { setModelStatus('error'); }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('ai_v_key_v2.5_only', customApiKey);
-    if (customApiKey.trim()) discoverModel(customApiKey.trim());
-  }, [customApiKey, discoverModel]);
-
-  const syncAiAudio = useCallback((t) => {
-    if (!audioRef.current || !audioUrl || !aiSegments || aiSegments.length === 0) return;
-    const sortedSegments = [...aiSegments].sort((a, b) => (a.track || 0) - (b.track || 0));
-    const seg = sortedSegments.find(s => t >= s.vStart && t < s.vStart + (s.aEnd - s.aStart));
-    
-    if (seg) {
-      const audioT = seg.aStart + (t - seg.vStart);
-      if (audioRef.current.paused) {
-        audioRef.current.currentTime = audioT;
-        audioRef.current.play().catch(() => {});
-      } else if (Math.abs(audioRef.current.currentTime - audioT) > 0.3) {
-        audioRef.current.currentTime = audioT;
-      }
-      audioRef.current.volume = aiVolume;
-    } else if (!audioRef.current.paused) {
-      audioRef.current.pause();
-    }
-  }, [audioUrl, aiSegments, aiVolume]);
-
-  useEffect(() => {
-    if (videoRef.current && !isRecording) {
-      const inRange = (currentTime >= vidAudioTrimStart && currentTime <= vidAudioTrimEnd);
-      videoRef.current.muted = !inRange;
-      videoRef.current.volume = videoVolume;
-    }
-  }, [currentTime, vidAudioTrimStart, vidAudioTrimEnd, videoVolume, isRecording]);
-
-  // Global Dragging Logic (For Playhead & AI Audio Segments)
-  useEffect(() => {
-    if (!dragState && !playheadDrag) return;
-
-    const handleMove = (e) => {
-      // 1. Playhead Dragging Logic
-      if (playheadDrag) {
-        if (!timelineRef.current || !duration) return;
-        const rect = timelineRef.current.getBoundingClientRect();
-        let nt = ((e.clientX - rect.left) / rect.width) * duration;
-        nt = Math.max(0, Math.min(nt, duration));
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D News - Professional Broadcast Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Padauk:wght@400;700&display=swap');
         
-        if (videoRef.current) {
-           videoRef.current.currentTime = nt;
-           setCurrentTime(nt);
+        body {
+            font-family: 'Padauk', sans-serif;
+            background-color: #0f172a; 
+            color: #e2e8f0;
         }
-        return;
-      }
-
-      // 2. Audio Segment Dragging & Collision Detection Logic
-      if (dragState && timelineRef.current) {
-        const rect = timelineRef.current.getBoundingClientRect();
-        const scrollTop = timelineRef.current.scrollTop;
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        }
+        .video-container {
+            width: 100%;
+            max-width: 420px; 
+            margin: 0 auto;
+            position: relative;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 9 / 16; 
+            background-color: #020617;
+            border-radius: 8px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            display: block;
+        }
+        .loader {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #ef4444; 
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .loader-small { width: 14px; height: 14px; border-width: 2px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .logo-font { font-family: 'Montserrat', sans-serif; }
         
-        const deltaT = ((e.clientX - dragState.startX) / rect.width) * duration;
+        .news-logo-box {
+            background-color: #cc0000;
+            color: white;
+            padding: 0.1rem 0.5rem;
+            line-height: 1;
+        }
         
-        setAiSegments(prev => {
-          const seg = prev.find(s => s.id === dragState.id);
-          if (!seg) return prev;
-          
-          const segDuration = seg.aEnd - seg.aStart;
-          let nV = dragState.startV + deltaT;
-          nV = Math.max(0, Math.min(nV, duration - segDuration)); // Timeline Boundaries Check
+        #progressTrack { cursor: pointer; }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-6 flex flex-col items-center">
 
-          const relativeY = e.clientY - rect.top + scrollTop;
-          let newTrack = Math.floor(relativeY / TRACK_HEIGHT);
-          newTrack = Math.max(0, newTrack); // Prevent Negative Track
-
-          // Overlap Prevention (Collision Detection)
-          const otherSegs = prev.filter(s => s.id !== dragState.id && (s.track || 0) === newTrack);
-          const eps = 0.005; // tiny tolerance
-
-          for (let oSeg of otherSegs) {
-            let oStart = oSeg.vStart;
-            let oEnd = oSeg.vStart + (oSeg.aEnd - oSeg.aStart);
-            let myEnd = nV + segDuration;
-
-            // If overlap occurs on the same track
-            if (nV < oEnd - eps && myEnd > oStart + eps) {
-              if (dragState.startV <= oStart) {
-                 nV = oStart - segDuration; // Push Left
-              } else {
-                 nV = oEnd; // Push Right
-              }
-            }
-          }
-          
-          // Final boundary check after collision resolution
-          nV = Math.max(0, Math.min(nV, duration - segDuration));
-
-          return prev.map(s => s.id === dragState.id ? { ...s, vStart: nV, track: newTrack } : s);
-        });
-      }
-    };
-
-    const handleUp = () => {
-      setDragState(null);
-      setPlayheadDrag(false);
-    };
-    
-    window.addEventListener('pointermove', handleMove);
-    window.addEventListener('pointerup', handleUp);
-    return () => {
-      window.removeEventListener('pointermove', handleMove);
-      window.removeEventListener('pointerup', handleUp);
-    };
-  }, [dragState, playheadDrag, duration]);
-
-  const pcmToWav = (pcm, rate) => {
-    const buf = new ArrayBuffer(44 + pcm.length * 2);
-    const view = new DataView(buf);
-    const writeS = (o, str) => { for (let i = 0; i < str.length; i++) view.setUint8(o + i, str.charCodeAt(i)); };
-    writeS(0, 'RIFF'); view.setUint32(4, 32 + pcm.length * 2, true); writeS(8, 'WAVE'); writeS(12, 'fmt ');
-    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-    view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-    writeS(36, 'data'); view.setUint32(40, pcm.length * 2, true);
-    for (let i = 0, o = 44; i < pcm.length; i++, o += 2) view.setInt16(o, pcm[i], true);
-    return new Blob([buf], { type: 'audio/wav' });
-  };
-
-  const handleFileChange = (e) => {
-    const f = e.target.files[0];
-    if (f) {
-      setFile(f); setVideoUrl(URL.createObjectURL(f));
-      setScript(''); setAudioUrl(null); setAiSegments([]); setIsPlaying(false);
-      setTrimStart(0); setVidAudioTrimStart(0); setDuration(0);
-      setRecordedVideo(null); setSelectedAiSegId(null);
-    }
-  };
-
-  const generateContent = async () => {
-    if (!file) return;
-    if (!activeKey) {
-      setShowSettings(true);
-      return;
-    }
-    setLoading(true); setProgress(`Gemini 2.5 ဖြင့် အသေးစိတ် လေ့လာနေသည်...`); setScript(''); setAiSegments([]); setAudioUrl(null);
-    try {
-      const reader = new FileReader();
-      const base64 = await new Promise((res) => {
-        reader.onload = () => res(reader.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-
-      const prompt = `You are an energetic Burmese narrator. Focus ONLY on video from ${formatTime(trimStart)} to ${formatTime(trimEnd)}.
-      - TONE: Lively, energetic, cinematic and poetic (ဖွဲ့ဖွဲ့နွဲ့နွဲ့).
-      - STYLE: Natural spoken particles like "နော်", "လေးဗျာ", "မိုက်တယ်".
-      - NO formal written Burmese.
-      - Descriptive and flowy paragraphs. Burmese only. No timestamps.`;
-      
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${activeKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: file.type, data: base64 } }] }] })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "Model Error");
-
-      let txt = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      txt = txt.replace(/\[.*?\]/g, '').replace(/\*/g, '').trim();
-      setScript(txt); setProgress(`တက်ကြွသော AI အသံ ဖန်တီးနေသည်...`);
-      
-      const tts = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          contents: [{ parts: [{ text: txt }] }],
-          generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } } }, 
-        })
-      });
-      const ttsD = await tts.json();
-      
-      if (!tts.ok) throw new Error(ttsD.error?.message || "TTS API Error");
-
-      const audioPart = ttsD.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
-      if (audioPart) {
-        const bin = atob(audioPart.data);
-        const bytes = new Int16Array(bin.length / 2);
-        for (let i = 0; i < bin.length; i += 2) bytes[i/2] = (bin.charCodeAt(i+1) << 8) | bin.charCodeAt(i);
-        const rate = parseInt(audioPart.mimeType?.split('rate=')[1]) || 24000;
-        const dur = bytes.length / rate;
-        setAudioUrl(URL.createObjectURL(pcmToWav(bytes, rate)));
-        setAiSegments([{ id: Date.now(), aStart: 0, aEnd: dur, vStart: trimStart, track: 0 }]);
-        setSelectedAiSegId(null);
-      } else { throw new Error("Safety Filter ကြောင့် အသံထုတ်မရပါ။"); }
-    } catch (e) { setScript(translateApiError(e.message)); } finally { setLoading(false); setProgress(''); }
-  };
-
-  const toPct = (v, t) => {
-    if (!t || t <= 0 || isNaN(v) || isNaN(t)) return "0%";
-    return `${Math.max(0, Math.min((v / t) * 100, 100))}%`;
-  };
-
-  // Allow clicking empty timeline space to jump playhead and start drag
-  const handleTimelinePointerDown = (e) => {
-    if (dragState || playheadDrag || !timelineRef.current || !duration) return;
-    if (videoRef.current && isPlaying) {
-        videoRef.current.pause();
-        setIsPlaying(false);
-    }
-    const rect = timelineRef.current.getBoundingClientRect();
-    const nt = Math.max(0, Math.min(((e.clientX - rect.left) / rect.width) * duration, duration));
-    
-    if (videoRef.current) { 
-       videoRef.current.currentTime = nt; 
-       setCurrentTime(nt);
-    }
-    setSelectedAiSegId(null);
-    setPlayheadDrag(true); // Initiate scrubbing
-  };
-
-  const handlePointerDownSegment = (e, s) => {
-    e.stopPropagation(); 
-    setSelectedAiSegId(s.id);
-    if (!timelineRef.current) return;
-    setDragState({ 
-      id: s.id, 
-      startX: e.clientX, 
-      startV: s.vStart,
-    });
-  };
-
-  const splitSegment = () => {
-    if (!selectedAiSegId) return;
-    const seg = aiSegments.find(s => s.id === selectedAiSegId);
-    if (!seg) return;
-    
-    const segDuration = seg.aEnd - seg.aStart;
-    const segEndV = seg.vStart + segDuration;
-
-    if (currentTime > seg.vStart && currentTime < segEndV) {
-      const splitPointA = seg.aStart + (currentTime - seg.vStart);
-
-      const seg1 = { ...seg, aEnd: splitPointA };
-      // seg2 precisely begins where seg1 ends
-      const seg2 = { id: Date.now(), aStart: splitPointA, aEnd: seg.aEnd, vStart: currentTime, track: seg.track };
-
-      setAiSegments(prev => [
-        ...prev.filter(s => s.id !== selectedAiSegId),
-        seg1,
-        seg2
-      ]);
-      setSelectedAiSegId(null);
-      setErrorMsg('');
-    } else {
-      setErrorMsg("ဖြတ်တောက်ရန် အဖြူ/အနီရောင်မျဉ်းသည် ရွေးချယ်ထားသော အဝါရောင် AI အသံပေါ်တွင် ရှိနေရပါမည်။");
-      setTimeout(() => setErrorMsg(''), 4000);
-    }
-  };
-
-  const deleteSegment = () => {
-    if (!selectedAiSegId) return;
-    setAiSegments(prev => prev.filter(s => s.id !== selectedAiSegId));
-    setSelectedAiSegId(null);
-  };
-
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (isPlaying) { videoRef.current.pause(); if(audioRef.current) audioRef.current.pause(); }
-    else { 
-      if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) videoRef.current.currentTime = trimStart;
-      syncAiAudio(videoRef.current.currentTime); videoRef.current.play().catch(() => {});
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleTimeUpdate = () => {
-    if (!videoRef.current || playheadDrag) return;
-    const c = videoRef.current.currentTime; 
-    setCurrentTime(c);
-    if (isPlaying && !isRecording) {
-      if (c >= trimEnd) { videoRef.current.pause(); setIsPlaying(false); videoRef.current.currentTime = trimStart; syncAiAudio(trimStart); }
-      else if (c < trimStart) videoRef.current.currentTime = trimStart;
-      syncAiAudio(c);
-    }
-  };
-
-  const formatTime = (t) => {
-    if (isNaN(t) || t === Infinity || t === null) return "0:00.0";
-    return `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}.${Math.floor((t%1)*10)}`;
-  };
-
-  const startExport = async () => {
-    if (!videoRef.current || !audioUrl) return;
-    setIsRecording(true); setRecordedVideo(null); 
-    const video = videoRef.current; video.currentTime = trimStart; video.pause();
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const dest = ctx.createMediaStreamDestination();
-    try {
-      if (audioRef.current) ctx.createMediaStreamSource(audioRef.current.captureStream ? audioRef.current.captureStream() : audioRef.current.mozCaptureStream()).connect(dest);
-      ctx.createMediaStreamSource(video.captureStream ? video.captureStream() : video.mozCaptureStream()).connect(dest);
-      const combinedStream = new MediaStream([...video.captureStream().getVideoTracks(), ...dest.stream.getAudioTracks()]);
-      const recorder = new MediaRecorder(combinedStream);
-      mediaRecorderRef.current = recorder; recordedChunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunksRef.current.push(e.data); };
-      recorder.onstop = () => {
-        const b = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        setRecordedVideo({ url: URL.createObjectURL(b), size: (b.size / 1024 / 1024).toFixed(2), blob: b });
-        setIsRecording(false); ctx.close();
-      };
-      const checkEnd = () => { if (video.currentTime >= trimEnd) { video.removeEventListener('timeupdate', checkEnd); if (recorder.state === 'recording') recorder.stop(); } syncAiAudio(video.currentTime); };
-      video.addEventListener('timeupdate', checkEnd);
-      recorder.start(); await video.play(); setIsPlaying(true);
-    } catch (e) { setIsRecording(false); }
-  };
-
-  const maxTrack = aiSegments.length > 0 ? Math.max(...aiSegments.map(s => s.track || 0)) : 0;
-  const numTracks = Math.max(3, maxTrack + 2); 
-
-  return (
-    <>
-      <style>{`
-        body { margin: 0; background: #0a0a0a; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(234, 179, 8, 0.4); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-corner { background: transparent; }
-        .range-slider { -webkit-appearance: none; background: transparent; width: 100%; height: 24px; }
-        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #eab308; cursor: pointer; margin-top: -6px; border: 2px solid black; }
-        .range-slider::-webkit-slider-runnable-track { height: 4px; background: #333; border-radius: 2px; }
-        .timeline-wrapper { touch-action: none; user-select: none; }
-      `}</style>
-
-      {/* Hidden Elements */}
-      <input type="file" ref={fileInputRef} accept="video/*" className="hidden" onChange={handleFileChange} />
-      <div className="hidden"><audio ref={audioRef} src={audioUrl || ''} preload="auto" /></div>
-
-      <div className="min-h-screen lg:h-screen flex flex-col bg-neutral-950 text-neutral-100 font-sans selection:bg-yellow-500/30 overflow-x-hidden lg:overflow-hidden">
+    <div class="w-full max-w-6xl flex flex-col gap-6">
         
-        {/* HEADER */}
-        <header className="flex-none bg-black/90 backdrop-blur-md border-b border-yellow-900/30 p-4 flex justify-between items-center shadow-lg z-50 sticky top-0">
-          <div className="flex items-center gap-2">
-            <div className="bg-yellow-500 p-1.5 rounded-lg shadow-lg"><Film size={18} className="text-black" /></div>
-            <h1 className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-500 tracking-tight">Premium AI Studio</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowSettings(true)} className="p-2 rounded-full bg-neutral-900/50 text-neutral-400 hover:text-yellow-500 transition-all border border-neutral-800"><Settings size={20} /></button>
-            {videoUrl && (
-              <button onClick={() => isRecording ? mediaRecorderRef.current?.stop() : startExport()} disabled={!isRecording && !audioUrl} className={`px-5 py-2 rounded-full font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isRecording ? 'bg-red-600 animate-pulse text-white' : 'bg-yellow-500 text-black hover:brightness-110 shadow-lg'}`}>
-                {isRecording ? <><Square size={12} fill="white" /> ရပ်မည်</> : <><Save size={14} /> ထုတ်ယူမည်</>}
-              </button>
-            )}
-          </div>
+        <!-- Header -->
+        <header class="w-full flex flex-col md:flex-row items-center justify-between pb-4 border-b border-slate-700/80 gap-4">
+            <div class="flex items-center gap-1 cursor-pointer shrink-0 mx-auto md:mx-0">
+                <div class="news-logo-box font-black text-3xl md:text-4xl logo-font tracking-tighter">D</div>
+                <div class="text-white font-black text-3xl md:text-4xl logo-font tracking-tighter ml-1">NEWS</div>
+            </div>
+            <div class="text-slate-400 text-sm font-semibold uppercase tracking-widest mx-auto md:mx-0">
+                <i class="fa-solid fa-satellite-dish text-red-500 mr-2"></i> Broadcast Studio
+            </div>
         </header>
 
-        {/* Error Toast Message */}
-        {errorMsg && (
-          <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-red-950/90 border border-red-500 text-red-200 px-6 py-3 rounded-full text-sm font-bold shadow-2xl z-[200] flex items-center gap-2 animate-in slide-in-from-top-4 fade-in w-[90%] md:w-auto text-center">
-            <XCircle size={16} className="text-red-500 shrink-0"/> {errorMsg}
-          </div>
-        )}
-
-        {/* MAIN WORKSPACE */}
-        <main className="flex-1 flex flex-col lg:flex-row gap-6 p-4 overflow-y-auto lg:overflow-hidden">
-          
-          {/* LEFT COLUMN: PLAYER & TIMELINE */}
-          <div className="lg:w-2/3 flex flex-col lg:h-full gap-4 relative shrink-0">
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
             
-            {/* Video Player Box */}
-            <div className="w-full relative bg-black rounded-2xl border border-neutral-800 shadow-2xl group flex items-center justify-center overflow-hidden min-h-[250px] h-[45vh] lg:h-auto lg:max-h-none lg:flex-1">
-              {!videoUrl ? (
-                <div onClick={() => fileInputRef.current.click()} className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer hover:bg-neutral-900/50 transition-colors z-10">
-                  <div className="bg-yellow-500/10 p-6 rounded-full mb-4 transition-all"><Upload size={40} className="text-yellow-500" /></div>
-                  <p className="text-yellow-500/70 text-sm font-medium">ဗီဒီယို တင်ပါ</p>
-                </div>
-              ) : (
-                <>
-                  <video 
-                    ref={videoRef} 
-                    src={videoUrl} 
-                    className="w-full h-full object-contain" 
-                    onTimeUpdate={handleTimeUpdate} 
-                    crossOrigin="anonymous" 
-                    onLoadedMetadata={(e) => { 
-                      setDuration(e.target.duration); 
-                      setTrimEnd(e.target.duration); 
-                      setVidAudioTrimEnd(e.target.duration); 
-                    }} 
-                  />
-                  <button onClick={() => fileInputRef.current.click()} className="absolute top-3 left-3 bg-black/60 p-2 rounded-xl border border-neutral-700 text-[10px] font-bold flex items-center gap-2 hover:bg-black text-neutral-300 z-20">
-                    <RefreshCw size={12} className="text-yellow-500" /> ပြောင်းမည်
-                  </button>
-                  {/* Play Overlay */}
-                  <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button onClick={togglePlay} className="bg-yellow-500 text-black p-3 rounded-full hover:scale-105 transition-transform shadow-lg">
-                      {isPlaying ? <Pause size={18} fill="black" /> : <Play size={18} fill="black" />}
-                    </button>
-                    <div className="bg-black/80 px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider border border-neutral-800 text-yellow-500">
-                      {formatTime(currentTime)} / {formatTime(duration)}
-                    </div>
-                  </div>
-                </>
-              )}
-              {loading && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-3 z-50 animate-in fade-in">
-                  <Loader2 className="animate-spin text-yellow-500" size={40} />
-                  <p className="text-yellow-500 font-bold text-sm tracking-widest uppercase">{progress}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Timeline Section (Multi-Track) */}
-            <div className="flex-none bg-neutral-950 pt-2 pb-2">
-              <div className="flex justify-between items-center mb-2 h-8">
-                 <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
-                   <Layers size={14} /> Multi-Track Timeline
-                 </span>
-                 {selectedAiSegId && (
-                   <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
-                      <button onClick={splitSegment} className="bg-neutral-800 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-neutral-700">
-                         <Scissors size={14} className="text-yellow-500"/> ဖြတ်မည်
-                      </button>
-                      <button onClick={deleteSegment} className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-red-500/30">
-                         <Trash size={14}/> ဖျက်မည်
-                      </button>
-                   </div>
-                 )}
-              </div>
-
-              {/* Scrollable Timeline Container */}
-              <div className="relative bg-neutral-900 rounded-xl border border-neutral-800 shadow-lg overflow-hidden flex">
+            <!-- Panel 1: Generate -->
+            <div class="lg:col-span-5 glass-panel p-5 flex flex-col gap-4 h-fit">
+                <h2 class="text-base md:text-lg font-bold text-red-500 border-b border-slate-700 pb-2 uppercase tracking-wide">
+                    <i class="fa-solid fa-tower-broadcast mr-2"></i> 1. Prepare Broadcast
+                </h2>
                 
-                {/* Fixed Track Headers (Left Side) */}
-                <div className="w-[40px] bg-black/50 border-r border-neutral-800 flex flex-col z-10 hidden sm:flex">
-                  {Array.from({ length: numTracks }).map((_, i) => (
-                    <div key={i} className="flex-none flex items-center justify-center text-[9px] font-bold text-neutral-600 border-b border-neutral-800/50" style={{ height: TRACK_HEIGHT }}>
-                      L{i+1}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Main Scrollable Track Area */}
-                <div 
-                  ref={timelineRef} 
-                  onPointerDown={handleTimelinePointerDown}
-                  className="flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar touch-none h-[140px]"
-                >
-                  {!videoUrl && <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-600">No media loaded</div>}
-                  
-                  {videoUrl && duration > 0 && (
-                    <div className="relative w-full" style={{ height: numTracks * TRACK_HEIGHT }}>
-                      
-                      {/* Background Track Lines */}
-                      {Array.from({ length: numTracks }).map((_, i) => (
-                        <div key={i} className="absolute w-full border-b border-neutral-800/30 pointer-events-none" style={{ top: i * TRACK_HEIGHT, height: TRACK_HEIGHT }} />
-                      ))}
-
-                      {/* Trim Mask Overlay */}
-                      <div className="absolute top-0 bottom-0 left-0 bg-black/70 z-0 pointer-events-none" style={{ width: toPct(trimStart, duration) }} />
-                      <div className="absolute top-0 bottom-0 right-0 bg-black/70 z-0 pointer-events-none" style={{ width: toPct(duration - trimEnd, duration) }} />
-
-                      {/* AI Audio Segments */}
-                      {aiSegments.map(s => {
-                        const isS = selectedAiSegId === s.id;
-                        const tIndex = s.track || 0;
-                        return (
-                          <div 
-                            key={s.id} 
-                            onPointerDown={(e) => handlePointerDownSegment(e, s)}
-                            className={`absolute rounded-md border transition-all flex items-center justify-center cursor-grab active:cursor-grabbing ${isS ? 'bg-yellow-400 border-white z-50 shadow-[0_0_20px_rgba(234,179,8,0.8)] scale-y-105' : 'bg-yellow-600 border-yellow-700 z-10'}`}
-                            style={{ 
-                              left: toPct(s.vStart, duration), 
-                              width: toPct(s.aEnd - s.aStart, duration),
-                              top: tIndex * TRACK_HEIGHT + 6, 
-                              height: TRACK_HEIGHT - 12 
-                            }}
-                          >
-                            <Waves size={14} className="text-black opacity-80" />
-                          </div>
-                        );
-                      })}
-                      
-                      {/* Playhead (Draggable) */}
-                      <div 
-                        className="absolute top-0 bottom-0 w-[2px] bg-white z-[60] pointer-events-none shadow-[0_0_8px_rgba(255,255,255,0.6)] transition-all duration-75" 
-                        style={{ left: toPct(currentTime, duration) }}
-                      >
-                         <div 
-                            className="absolute -top-[10px] -translate-x-1/2 w-8 h-8 flex flex-col items-center justify-start pointer-events-auto cursor-ew-resize group"
-                            onPointerDown={(e) => {
-                               e.stopPropagation();
-                               setPlayheadDrag(true);
-                            }}
-                         >
-                            <div className="w-4 h-5 bg-white rounded-sm shadow-md flex items-center justify-center border border-neutral-300 group-hover:scale-110 transition-transform">
-                              <div className="w-[2px] h-3 bg-red-500 rounded-full"></div>
-                            </div>
-                            <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white mt-[1px]"></div>
-                         </div>
-                         <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-red-500 h-full"></div>
-                      </div>
-
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Export Success Banner */}
-            {recordedVideo && (
-              <div className="absolute bottom-40 left-4 right-4 bg-yellow-500/10 backdrop-blur-md border border-yellow-500/50 rounded-2xl p-6 text-center animate-in slide-in-from-bottom-4 flex flex-col items-center z-[100] shadow-2xl">
-                <Check size={40} className="text-green-500 mb-2" />
-                <h3 className="font-bold text-lg text-yellow-500 mb-1">ဗီဒီယို ထုတ်ယူပြီးပါပြီ</h3>
-                <p className="text-sm text-neutral-300 mb-4 font-mono">Size: {recordedVideo.size} MB</p>
-                <div className="flex gap-3">
-                  <a href={recordedVideo.url} download="Premium_AI_Video.webm" className="bg-yellow-500 text-black px-6 py-2 rounded-full font-bold text-sm flex items-center gap-2 hover:bg-yellow-400 transition-colors shadow-lg">
-                    <Download size={16} /> Save to Device
-                  </a>
-                  <button onClick={() => setRecordedVideo(null)} className="px-4 py-2 rounded-full text-sm font-medium border border-neutral-600 hover:bg-neutral-800 transition-colors bg-black/50">
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT COLUMN: TABS */}
-          <div className="lg:w-1/3 bg-neutral-900 border border-neutral-800 rounded-2xl flex flex-col shadow-xl min-h-[500px] lg:min-h-0 lg:h-full overflow-hidden relative shrink-0">
-            
-            {/* Tab Headers */}
-            <div className="flex-none flex border-b border-neutral-800 bg-neutral-900 z-10">
-              {[
-                { id: 'script', icon: Mic2, label: 'AI Voice' },
-                { id: 'trim', icon: Scissors, label: 'Adjust' }
-              ].map(t => (
-                <button 
-                  key={t.id} 
-                  onClick={() => setActiveTab(t.id)}
-                  className={`flex-1 py-4 text-xs font-bold flex items-center justify-center gap-2 transition-all ${activeTab === t.id ? 'bg-neutral-800 text-yellow-500 border-b-2 border-yellow-500' : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/50'}`}
-                >
-                  <t.icon size={14} /> {t.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab Body */}
-            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar pb-10">
-              
-              {/* SCRIPT TAB */}
-              {activeTab === 'script' && (
-                <div className="space-y-6">
-                  <div>
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3 block">Voice Model</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {VOICES.map(v => (
-                        <button key={v.id} onClick={() => setSelectedVoice(v.id)}
-                          className={`p-3 rounded-xl border text-left flex flex-col gap-1 transition-all ${selectedVoice === v.id ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-500' : 'bg-black border-neutral-800 text-neutral-400 hover:border-neutral-700'}`}
-                        >
-                          <span className="text-sm font-bold">{v.name}</span>
-                          <span className="text-[10px] opacity-70">{v.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-black border border-neutral-800 rounded-2xl p-4">
-                    <button 
-                      onClick={generateContent}
-                      disabled={!videoUrl || loading}
-                      className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 text-black py-3 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 transition-all"
-                    >
-                      {loading ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} fill="black" />}
-                      {loading ? 'AI အလုပ်လုပ်နေသည်...' : 'AI ဖြင့် အသံအသစ်ဖန်တီးမည်'}
-                    </button>
-                    <p className="text-[10px] text-neutral-500 text-center mt-3">Selected timeline area will be sent to Gemini 2.5</p>
-                  </div>
-
-                  {script && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2">
-                      <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-                        <span>Generated Script</span>
-                      </label>
-                      <textarea 
-                        value={script} 
-                        onChange={(e) => setScript(e.target.value)}
-                        className="w-full h-48 bg-black border border-neutral-800 rounded-xl p-3 text-sm text-neutral-300 focus:outline-none focus:border-yellow-500/50 custom-scrollbar resize-none leading-relaxed"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TRIM & ADJUST TAB */}
-              {activeTab === 'trim' && (
-                <div className="space-y-8">
-                  <div>
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Film size={14} className="text-yellow-500" /> Video Trim (AI Focus)
-                    </label>
-                    <div className="px-2">
-                      <input type="range" min="0" max={duration} step="0.1" value={trimStart} 
-                        onChange={(e) => { const val = parseFloat(e.target.value); if(val < trimEnd) { setTrimStart(val); if(videoRef.current) videoRef.current.currentTime = val; } }}
-                        className="range-slider mb-2" 
-                      />
-                      <input type="range" min="0" max={duration} step="0.1" value={trimEnd} 
-                        onChange={(e) => { const val = parseFloat(e.target.value); if(val > trimStart) setTrimEnd(val); }}
-                        className="range-slider" 
-                      />
-                      <div className="flex justify-between text-xs text-neutral-500 mt-2 font-mono">
-                        <span>{formatTime(trimStart)}</span>
-                        <span>{formatTime(trimEnd)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-neutral-800">
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                      <Volume2 size={14} className="text-blue-500" /> Original Audio Region
-                    </label>
-                    <div className="px-2">
-                      <input type="range" min="0" max={duration} step="0.1" value={vidAudioTrimStart} 
-                        onChange={(e) => { const val = parseFloat(e.target.value); if(val < vidAudioTrimEnd) setVidAudioTrimStart(val); }}
-                        className="range-slider mb-2" 
-                      />
-                      <input type="range" min="0" max={duration} step="0.1" value={vidAudioTrimEnd} 
-                        onChange={(e) => { const val = parseFloat(e.target.value); if(val > vidAudioTrimStart) setVidAudioTrimEnd(val); }}
-                        className="range-slider" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-neutral-800 space-y-5">
-                     <div>
-                        <div className="flex justify-between text-xs font-bold mb-2">
-                          <span className="text-blue-500 flex items-center gap-2"><Volume2 size={12}/> Original Volume</span>
-                          <span className="text-neutral-500">{Math.round(videoVolume * 100)}%</span>
-                        </div>
-                        <input type="range" min="0" max="1" step="0.05" value={videoVolume} onChange={(e) => setVideoVolume(parseFloat(e.target.value))} className="w-full accent-blue-500" />
-                     </div>
-                     <div>
-                        <div className="flex justify-between text-xs font-bold mb-2">
-                          <span className="text-yellow-500 flex items-center gap-2"><Mic2 size={12}/> AI Voice Volume</span>
-                          <span className="text-neutral-500">{Math.round(aiVolume * 100)}%</span>
-                        </div>
-                        <input type="range" min="0" max="1" step="0.05" value={aiVolume} onChange={(e) => setAiVolume(parseFloat(e.target.value))} className="w-full accent-yellow-500" />
-                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </main>
-
-        {/* SETTINGS MODAL */}
-        {showSettings && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl shadow-black">
-              <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-black/50">
-                <h3 className="font-bold text-lg flex items-center gap-2"><Settings className="text-yellow-500" /> Settings</h3>
-                <button onClick={() => setShowSettings(false)} className="text-neutral-500 hover:text-white transition-colors"><XCircle size={20}/></button>
-              </div>
-              <div className="p-6 space-y-5">
                 <div>
-                  <label className="text-sm font-bold text-neutral-300 mb-2 block flex items-center gap-2">
-                    <Key size={14} className="text-yellow-500" /> API Key
-                  </label>
-                  <input type="password" placeholder="Enter Gemini API Key..." value={customApiKey} onChange={(e) => setCustomApiKey(e.target.value)}
-                    className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-yellow-500/50 transition-colors"
-                  />
-                  <p className="text-[10px] text-neutral-500 mt-2">Get a key from Google AI Studio. Stored locally.</p>
+                    <label class="text-xs text-slate-400 font-semibold mb-1 block uppercase">Broadcast Language</label>
+                    <div class="flex items-center bg-slate-800 p-2.5 rounded border border-slate-600 shadow-inner">
+                        <div class="px-2 text-red-400"><i class="fa-solid fa-language"></i></div>
+                        <select id="languageSelect" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer w-full">
+                            <option value="Burmese">မြန်မာ (Myanmar)</option>
+                            <option value="English">English</option>
+                            <option value="Korean">한국어 (Korean)</option>
+                            <option value="Japanese">日本語 (Japanese)</option>
+                            <option value="Thai">ภาษาไทย (Thai)</option>
+                        </select>
+                    </div>
                 </div>
-                
-                <div className="bg-black/50 border border-neutral-800 rounded-xl p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-bold text-neutral-300">Model Status</span>
-                    {modelStatus === 'searching' && <Loader2 size={14} className="animate-spin text-yellow-500" />}
-                    {modelStatus === 'found' && <Check size={14} className="text-green-500" />}
-                    {modelStatus === 'error' && <XCircle size={14} className="text-red-500" />}
-                  </div>
-                  <div className="text-xs text-neutral-500 font-mono break-all bg-black p-2 rounded-lg border border-neutral-800/50">
-                    {activeModel}
-                  </div>
-                  {modelStatus === 'error' && customApiKey && (
-                    <p className="text-xs text-red-400 mt-2">Invalid Key or Gemini 2.5 is not available.</p>
-                  )}
-                </div>
-                
-                <button onClick={() => setShowSettings(false)} className="w-full bg-neutral-100 text-black py-3 rounded-xl font-bold text-sm hover:bg-white transition-colors">
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
-      </div>
-    </>
-  );
-}
+                <p class="text-xs text-slate-400 leading-relaxed mt-1">
+                    <i class="fa-solid fa-circle-info text-blue-400 mr-1"></i> ကမ္ဘာအရေး၊ နည်းပညာ၊ အားကစား၊ စမတ်ဖုန်း၊ ငွေကြေး သတင်း ၅ ပုဒ်ကို အသေးစိတ် အလိုအလျောက် ရှာဖွေတင်ဆက်ပေးပါမည်။
+                </p>
+
+                <button id="btnGenerate" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-4 rounded transition-all flex items-center justify-center gap-2 shadow-lg uppercase tracking-wider text-sm mt-2">
+                    <i class="fa-solid fa-satellite-dish"></i> Generate In-depth News
+                </button>
+
+                <!-- Status -->
+                <div id="statusContainer" class="hidden p-4 bg-slate-900 rounded border border-red-500/30 shadow-inner mt-2">
+                    <div class="flex items-center gap-2 text-red-400 text-sm font-semibold mb-2">
+                        <div class="loader" id="statusLoader"></div> <span id="statusText">Starting Studio...</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                        <div id="generationProgress" class="bg-red-500 h-full w-0 transition-all shadow-[0_0_8px_#ef4444]"></div>
+                    </div>
+                    <p id="errorLog" class="text-xs text-red-400 mt-3 hidden bg-red-950/80 p-3 rounded font-mono break-words leading-relaxed border border-red-800"></p>
+                </div>
+            </div>
+
+            <!-- Panel 2: Video Player -->
+            <div class="lg:col-span-7 glass-panel p-5 flex flex-col items-center">
+                <h2 class="text-base md:text-lg font-bold mb-4 text-emerald-400 border-b border-slate-700 pb-2 w-full text-left uppercase tracking-wide">
+                    <i class="fa-solid fa-circle-play mr-2"></i> 2. Player & Auto-Record
+                </h2>
+                
+                <div class="video-container flex-grow flex items-center justify-center mb-4">
+                    <canvas id="videoCanvas" width="720" height="1280"></canvas>
+                    
+                    <div id="canvasOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-10 rounded border border-slate-700 backdrop-blur-sm">
+                        <div class="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mb-4 border border-red-500/30">
+                            <i class="fa-solid fa-video-slash text-2xl text-red-500"></i>
+                        </div>
+                        <p class="text-slate-300 text-sm font-semibold uppercase tracking-widest">Studio Standby</p>
+                    </div>
+                </div>
+
+                <!-- Record Settings & Play Buttons -->
+                <div class="w-full bg-slate-900 p-4 rounded border border-slate-700 shadow-inner">
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="text-xs text-slate-400 font-bold uppercase tracking-wider">Export Res (MP4):</label>
+                        <select id="resolutionSelect" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:outline-none text-xs font-mono">
+                            <option value="1920">1080x1920 (FHD)</option>
+                            <option value="1280" selected>720x1280 (HD)</option>
+                            <option value="854">480x854 (SD)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center gap-4">
+                        <div class="w-full flex items-center justify-between">
+                            <span class="text-xs text-red-400 font-mono font-bold" id="timeCurrent">00:00</span>
+                            <div class="w-full mx-3 bg-slate-800 h-1.5 rounded-full overflow-hidden relative" id="progressTrack">
+                                <div id="playbackProgress" class="bg-red-600 h-full w-0 shadow-[0_0_8px_#dc2626] absolute top-0 left-0 pointer-events-none"></div>
+                            </div>
+                            <span class="text-xs text-slate-500 font-mono" id="timeTotal">00:00</span>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="w-full flex flex-col sm:flex-row items-center gap-2">
+                            <button id="btnPlayOnly" class="w-full sm:w-2/5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
+                                <i class="fa-solid fa-play fa-lg" id="playIcon"></i> <span id="playText">Play Video</span>
+                            </button>
+                            <button id="btnStop" class="w-full sm:w-1/5 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-3 rounded transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
+                                <i class="fa-solid fa-stop fa-lg"></i> Stop
+                            </button>
+                            <button id="btnPlayAndRecord" class="w-full sm:w-2/5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
+                                <i class="fa-solid fa-record-vinyl fa-lg"></i> Play & Save
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="recordingStatus" class="hidden mt-3 p-3 bg-red-900/20 rounded border border-red-500/30 text-center">
+                        <div class="loader loader-small border-red-500/40 border-l-red-500 mb-2"></div>
+                        <p class="text-red-400 text-xs font-bold uppercase tracking-widest animate-pulse" id="recordingText">● Recording Broadcast</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Please wait until the end of the broadcast.</p>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <audio id="audioPlayer" class="hidden" crossorigin="anonymous"></audio>
+
+    <script>
+        // ==== Environment Configuration ====
+        const apiKey = ""; // Handled automatically by the execution environment
+        const modelName = 'gemini-2.5-flash-preview-09-2025'; 
+        
+        // ==== UI Elements ====
+        const btnGenerate = document.getElementById('btnGenerate');
+        const languageSelect = document.getElementById('languageSelect');
+        const resolutionSelect = document.getElementById('resolutionSelect');
+        const btnPlayOnly = document.getElementById('btnPlayOnly');
+        const playIcon = document.getElementById('playIcon');
+        const playText = document.getElementById('playText');
+        const btnStop = document.getElementById('btnStop');
+        const btnPlayAndRecord = document.getElementById('btnPlayAndRecord');
+        const progressTrack = document.getElementById('progressTrack');
+        const errorLog = document.getElementById('errorLog');
+
+        // Date String
+        const now = new Date();
+        const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+        const currentDateStr = now.toLocaleDateString('en-US', dateOptions);
+
+        // ==== SUPER ROBUST FETCH WITH EXPONENTIAL BACKOFF ====
+        async function fetchWithRetry(urlBase, payload, maxRetries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000]; 
+            
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const url = `${urlBase}?key=${apiKey}`;
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (res.ok) return res;
+                    
+                    if (i === maxRetries - 1) {
+                        const errText = await res.text();
+                        throw new Error(`API Error (${res.status}): ${errText}`);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                } catch (error) {
+                    if (i === maxRetries - 1) {
+                        throw new Error(error.message || `အင်တာနက်ချိတ်ဆက်မှု ပြဿနာ ဖြစ်ပွားနေပါသည်။ (Connection Error)`);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+        }
+
+        // ==== STATE VARIABLES ====
+        let newsItems = [];
+        let isGenerating = false;
+        let currentNewsIndex = 0;
+        let isPlaying = false;
+        let animationFrameId;
+        let canvasContext = document.getElementById('videoCanvas').getContext('2d');
+        let totalDuration = 0;
+        let anchorImageObj = null;
+
+        let mediaRecorder;
+        let recordedChunks = [];
+        let isRecording = false;
+        let audioContext, analyzer, dataArray;
+
+        const femaleAnchorStyles = [
+            "A cinematic beautiful female news anchor broadcasting live, modern news desk, glowing screens in background, highly detailed professional photography",
+            "A serious professional female news reporter looking directly at camera, CNN TV studio background, 4k resolution"
+        ];
+        
+        // ==== 2. GENERATION WORKFLOW ====
+        btnGenerate.addEventListener('click', async () => {
+            if (isGenerating) return;
+            
+            const targetLang = languageSelect.value;
+            
+            isGenerating = true; newsItems = []; anchorImageObj = null;
+            btnGenerate.disabled = true; 
+            btnPlayOnly.disabled = true; btnStop.disabled = true; btnPlayAndRecord.disabled = true;
+            
+            document.getElementById('statusContainer').classList.remove('hidden');
+            errorLog.classList.add('hidden');
+            stopPlayback();
+            
+            try {
+                updateStatus('Preparing Studio Background...', 5);
+                try {
+                    const avatarBase64 = await fetchImage(femaleAnchorStyles[Math.floor(Math.random() * femaleAnchorStyles.length)]);
+                    if(avatarBase64) {
+                        anchorImageObj = new Image(); anchorImageObj.crossOrigin = "anonymous";
+                        await new Promise(r => { anchorImageObj.onload = r; anchorImageObj.src = avatarBase64; });
+                    }
+                } catch(e) { console.warn("Avatar failed."); }
+
+                updateStatus(`Analyzing 5 Global News Topics...`, 15);
+                await fetchNewsWithRobustParsing(targetLang, modelName);
+
+                for (let i = 0; i < newsItems.length; i++) {
+                    updateStatus(`Generating Natural Voice (${i+1}/${newsItems.length})...`, 25 + ((i+1)/newsItems.length * 60));
+                    const fullText = newsItems[i].headline + "။ " + newsItems[i].paragraphs.join(" ");
+                    newsItems[i].audioUrl = await fetchAudio(fullText, targetLang);
+                }
+
+                let hasAudio = false;
+                for(let item of newsItems) if(item.audioUrl) hasAudio = true;
+                if (!hasAudio) throw new Error("အသံဖိုင် လုံးဝ ဖန်တီး၍ မရပါ။ API Error ဖြစ်နိုင်ပါသည်။");
+
+                updateStatus('Syncing Teleprompter...', 90);
+                await setupDurationsAndSubtitles();
+                
+                updateStatus('Ready to Broadcast!', 100);
+                setTimeout(() => document.getElementById('statusContainer').classList.add('hidden'), 2000);
+                
+                document.getElementById('canvasOverlay').classList.add('hidden');
+                
+                btnPlayOnly.disabled = false;
+                btnStop.disabled = false;
+                btnPlayAndRecord.disabled = false;
+                
+                currentNewsIndex = 0;
+                drawCanvasFrame(0);
+
+            } catch (error) {
+                updateStatus('Generation Failed.', 0, true);
+                showErrorLog(error.message);
+            } finally {
+                isGenerating = false; btnGenerate.disabled = false;
+            }
+        });
+
+        function updateStatus(text, percent, isError = false) {
+            document.getElementById('statusText').innerText = text;
+            document.getElementById('generationProgress').style.width = `${percent}%`;
+            if (isError) {
+                document.getElementById('statusText').classList.replace('text-red-400', 'text-slate-400');
+                document.getElementById('generationProgress').classList.replace('bg-red-500', 'bg-slate-500');
+            } else {
+                document.getElementById('statusText').classList.replace('text-slate-400', 'text-red-400');
+                document.getElementById('generationProgress').classList.replace('bg-slate-500', 'bg-red-500');
+            }
+        }
+        function showErrorLog(msg) { 
+            errorLog.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2 text-lg"></i> <br>${msg.replace(/\n/g, '<br>')}`; 
+            errorLog.classList.remove('hidden'); 
+        }
+
+        // ==== ROBUST TEXT PARSING (Exact Greeting, 5 Topics) ====
+        async function fetchNewsWithRobustParsing(language, modelName) {
+            
+            let greeting = "";
+            if (language === "Burmese") {
+                greeting = "မင်္ဂလာပါ။";
+            } else if (language === "English") {
+                greeting = "Hello.";
+            } else if (language === "Thai") {
+                greeting = "สวัสดีค่ะ";
+            } else if (language === "Korean") {
+                greeting = "안녕하세요.";
+            } else if (language === "Japanese") {
+                greeting = "こんにちは。";
+            } else {
+                greeting = "Hello.";
+            }
+
+            const prompt = `Act as an expert, engaging international female news anchor. Date: ${currentDateStr}.
+            Provide a broadcast of EXACTLY 5 DIFFERENT global news events in this order:
+            1. ကမ္ဘာအရေး (World News)
+            2. နည်းပညာ (Technology)
+            3. အားကစား (Sports)
+            4. စမတ်ဖုန်းသတင်း (Smartphone News)
+            5. ငွေကြေးသတင်း (Finance News)
+            
+            Language MUST be STRICTLY: ${language}.
+            
+            CRITICAL RULES:
+            - Keep it brief. Provide exactly 2 short paragraphs per story. The audio must take around 45 to 60 seconds maximum per story.
+            - Write in a highly natural, conversational spoken style. Use commas (,) frequently for natural pauses.
+            - First paragraph of the FIRST story (World News) MUST start with exactly: "${greeting}"
+            - DO NOT add any extra greetings or sign-offs other than the one specified.
+            
+            Reply ONLY with a valid JSON array. DO NOT use markdown blocks like \`\`\`json.
+            Format EXACTLY like this:
+            [ 
+              { "category": "ကမ္ဘာအရေး", "headline": "Headline 1", "paragraphs": ["${greeting} Paragraph 1...", "Paragraph 2..."] },
+              { "category": "နည်းပညာ", "headline": "Headline 2", "paragraphs": ["..."] },
+              { "category": "အားကစား", "headline": "Headline 3", "paragraphs": ["..."] },
+              { "category": "စမတ်ဖုန်း", "headline": "Headline 4", "paragraphs": ["..."] },
+              { "category": "ငွေကြေး", "headline": "Headline 5", "paragraphs": ["..."] }
+            ]`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ "google_search": {} }],
+                generationConfig: { temperature: 0.3 } 
+            };
+
+            const urlBase = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+            const res = await fetchWithRetry(urlBase, payload);
+            const data = await res.json();
+            let text = data.candidates[0].content.parts[0].text;
+            
+            const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (jsonMatch) {
+                try {
+                    newsItems = JSON.parse(jsonMatch[0]);
+                } catch(e) { throw new Error("AI မှ တင်ဆက်မှုပုံစံ မှားယွင်းနေပါသည်။ (JSON Parsing Error)"); }
+            } else {
+                throw new Error("AI failed to output proper JSON format.");
+            }
+        }
+
+        async function fetchImage(prompt) {
+            try {
+                const payload = { instances: { prompt: prompt }, parameters: { sampleCount: 1, aspectRatio: "9:16" } };
+                const urlBase = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`;
+                
+                const res = await fetchWithRetry(urlBase, payload, 3);
+                const data = await res.json();
+                if (data.predictions && data.predictions[0]) return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+            } catch(e) {}
+            return null; 
+        }
+
+        async function fetchAudio(text, language) {
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: text }] }],
+                    generationConfig: { 
+                        responseModalities: ["AUDIO"], 
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } 
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+                const urlBase = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`;
+                
+                const res = await fetchWithRetry(urlBase, payload);
+                const data = await res.json();
+                
+                if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                    const inlineData = data.candidates[0].content.parts[0].inlineData;
+                    const sampleRate = parseInt(inlineData.mimeType.match(/rate=(\d+)/)?.[1] || 24000);
+                    return URL.createObjectURL(pcmToWav(inlineData.data, sampleRate));
+                }
+            } catch(e) { console.warn("TTS Error", e); }
+            
+            // Public Google Translate Fallback
+            const langMap = { 'Burmese': 'my', 'English': 'en', 'Korean': 'ko', 'Japanese': 'ja', 'Thai': 'th' };
+            const tl = langMap[language] || 'en';
+            return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 195))}&tl=${tl}&client=tw-ob`;
+        }
+
+        function pcmToWav(pcmBase64, sampleRate) {
+            const binaryString = atob(pcmBase64);
+            const pcmData = new Int16Array(binaryString.length / 2);
+            for (let i = 0; i < binaryString.length; i += 2) pcmData[i / 2] = binaryString.charCodeAt(i) | (binaryString.charCodeAt(i + 1) << 8);
+            const wavBuffer = new ArrayBuffer(44 + pcmData.byteLength); const view = new DataView(wavBuffer);
+            const writeString = (v, offset, str) => { for (let i = 0; i < str.length; i++) v.setUint8(offset + i, str.charCodeAt(i)); };
+            writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + pcmData.byteLength, true); writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeString(view, 36, 'data');
+            view.setUint32(40, pcmData.byteLength, true);
+            for (let i = 0; i < pcmData.length; i++) view.setInt16(44 + i * 2, pcmData[i], true);
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        // ==== AUDIO SYNC ====
+        async function setupDurationsAndSubtitles() {
+            totalDuration = 0;
+            for(let item of newsItems) {
+                if(item.audioUrl) {
+                    const tempAudio = new Audio(item.audioUrl);
+                    await new Promise(r => { 
+                        tempAudio.onloadedmetadata = () => { 
+                            if(tempAudio.duration === Infinity || isNaN(tempAudio.duration)) {
+                                tempAudio.currentTime = 1e101;
+                                tempAudio.ontimeupdate = () => {
+                                    tempAudio.ontimeupdate = () => {};
+                                    tempAudio.currentTime = 0;
+                                    item.duration = tempAudio.duration;
+                                    totalDuration += tempAudio.duration;
+                                    r();
+                                }
+                            } else {
+                                item.duration = tempAudio.duration; 
+                                totalDuration += tempAudio.duration; 
+                                r(); 
+                            }
+                        };
+                        tempAudio.onerror = () => { item.duration = 5; totalDuration += 5; r(); }; 
+                    });
+
+                    const fullTextForAudio = item.headline + item.paragraphs.join("");
+                    const totalChars = fullTextForAudio.length;
+                    
+                    item.subtitles = [];
+                    let accumulatedTime = 0;
+
+                    const headlineTime = (item.headline.length / totalChars) * item.duration;
+                    item.subtitles.push({ text: "...", start: 0, end: headlineTime });
+                    accumulatedTime += headlineTime;
+
+                    item.paragraphs.forEach(p => {
+                        const words = p.split(/(?<=[။၊\.\,])/); 
+                        let currentChunk = ""; let chunks = [];
+                        words.forEach(w => {
+                            if(currentChunk.length + w.length > 150) { 
+                                if(currentChunk) chunks.push(currentChunk.trim()); 
+                                currentChunk = w; 
+                            } else {
+                                currentChunk += w;
+                            }
+                        });
+                        if(currentChunk) chunks.push(currentChunk.trim());
+
+                        const pTimeTotal = (p.length / totalChars) * item.duration;
+                        const timePerChar = pTimeTotal / p.length;
+
+                        chunks.forEach(c => {
+                            const chunkTime = c.length * timePerChar;
+                            item.subtitles.push({ text: c, start: accumulatedTime, end: accumulatedTime + chunkTime });
+                            accumulatedTime += chunkTime;
+                        });
+                    });
+                }
+            }
+            document.getElementById('timeTotal').innerText = formatTime(totalDuration);
+        }
+
+        // ==== PLAY & RECORD LOGIC ====
+        function initAudioAnalyzer() {
+            if(!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyzer = audioContext.createAnalyser(); analyzer.fftSize = 256;
+                    const source = audioContext.createMediaElementSource(audioPlayer);
+                    source.connect(analyzer); analyzer.connect(audioContext.destination);
+                    dataArray = new Uint8Array(analyzer.frequencyBinCount);
+                } catch (e) {
+                    console.error("Audio Context Init Error:", e);
+                }
+            }
+        }
+
+        // Play/Pause
+        btnPlayOnly.addEventListener('click', async () => {
+            if (!newsItems.length || isRecording) return;
+            
+            try {
+                if (!audioContext) initAudioAnalyzer();
+                if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+            } catch(e) { }
+
+            if (isPlaying) {
+                audioPlayer.pause();
+                isPlaying = false;
+                playIcon.classList.replace('fa-pause', 'fa-play');
+                playText.innerText = "Play Video";
+                cancelAnimationFrame(animationFrameId);
+            } else {
+                isRecording = false;
+                btnPlayAndRecord.disabled = true;
+                
+                if (audioPlayer.currentTime === 0 && currentNewsIndex === 0 && (!audioPlayer.src || audioPlayer.src === window.location.href)) {
+                    audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
+                }
+                
+                audioPlayer.play().then(() => {
+                    isPlaying = true;
+                    playIcon.classList.replace('fa-play', 'fa-pause');
+                    playText.innerText = "Pause";
+                    renderLoop();
+                }).catch(e => console.error(e));
+            }
+        });
+
+        // Stop
+        btnStop.addEventListener('click', () => {
+            if (!newsItems.length) return;
+            stopPlayback();
+            if(isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            playIcon.classList.replace('fa-pause', 'fa-play');
+            playText.innerText = "Play Video";
+            btnPlayOnly.disabled = false;
+            btnPlayAndRecord.disabled = false;
+            isRecording = false;
+            document.getElementById('recordingStatus').classList.add('hidden');
+        });
+
+        // Seek (Scrub)
+        let isDragging = false;
+        progressTrack.addEventListener('mousedown', (e) => { isDragging = true; seekAudio(e); });
+        window.addEventListener('mouseup', () => isDragging = false);
+        progressTrack.addEventListener('mousemove', (e) => { if (isDragging) seekAudio(e); });
+        progressTrack.addEventListener('touchstart', (e) => { isDragging = true; seekAudio(e.touches[0]); });
+        window.addEventListener('touchend', () => isDragging = false);
+        progressTrack.addEventListener('touchmove', (e) => { if (isDragging) seekAudio(e.touches[0]); });
+
+        function seekAudio(e) {
+            if (!newsItems.length || totalDuration === 0 || isRecording) return; 
+            const rect = progressTrack.getBoundingClientRect();
+            let clickX = e.clientX - rect.left;
+            if (clickX < 0) clickX = 0;
+            if (clickX > rect.width) clickX = rect.width;
+            
+            const targetTime = (clickX / rect.width) * totalDuration;
+            
+            let accumulated = 0;
+            let targetIndex = 0;
+            let localTime = 0;
+
+            for (let i = 0; i < newsItems.length; i++) {
+                if (targetTime <= accumulated + newsItems[i].duration) {
+                    targetIndex = i;
+                    localTime = targetTime - accumulated;
+                    break;
+                }
+                accumulated += newsItems[i].duration;
+            }
+
+            const wasPlaying = isPlaying;
+            if (targetIndex !== currentNewsIndex) {
+                currentNewsIndex = targetIndex;
+                audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
+            }
+            
+            if (audioPlayer.readyState >= 1) {
+                audioPlayer.currentTime = localTime;
+            } else {
+                const onLoaded = function() {
+                    audioPlayer.currentTime = localTime;
+                    audioPlayer.removeEventListener('loadedmetadata', onLoaded);
+                };
+                audioPlayer.addEventListener('loadedmetadata', onLoaded);
+            }
+            
+            if (wasPlaying && audioPlayer.paused) {
+                audioPlayer.play().catch(e => console.log(e));
+            }
+            
+            drawCanvasFrame(performance.now() / 1000, localTime, 0);
+            document.getElementById('timeCurrent').innerText = formatTime(targetTime);
+            document.getElementById('playbackProgress').style.width = `${(targetTime / totalDuration) * 100}%`;
+        }
+
+        // Record to MP4 FORMAT
+        btnPlayAndRecord.addEventListener('click', async () => {
+            if (!newsItems.length || isRecording) return;
+            try {
+                if (!audioContext) initAudioAnalyzer();
+                if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+            } catch(e){}
+
+            const resHeight = parseInt(resolutionSelect.value);
+            const resWidth = Math.floor(resHeight * (9/16)); 
+            document.getElementById('videoCanvas').width = resWidth; 
+            document.getElementById('videoCanvas').height = resHeight;
+
+            isRecording = true; recordedChunks = [];
+            btnPlayOnly.disabled = true;
+            btnPlayAndRecord.disabled = true; 
+            document.getElementById('recordingStatus').classList.remove('hidden');
+            document.getElementById('recordingText').innerText = '● Recording Broadcast';
+            
+            try {
+                let combinedStream;
+                const canvasStream = document.getElementById('videoCanvas').captureStream(30);
+                
+                if (audioContext && analyzer) {
+                    const dest = audioContext.createMediaStreamDestination(); 
+                    analyzer.connect(dest); 
+                    combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+                } else {
+                    combinedStream = canvasStream; 
+                }
+                
+                // Set mimeType to MP4 
+                let options = { mimeType: 'video/webm; codecs=vp8,opus' };
+                if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.424028, mp4a.40.2"')) {
+                    options = { mimeType: 'video/mp4; codecs="avc1.424028, mp4a.40.2"' };
+                } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+                    options = { mimeType: 'video/mp4' };
+                }
+
+                mediaRecorder = new MediaRecorder(combinedStream, options);
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                
+                mediaRecorder.onstop = () => {
+                    const format = options.mimeType.includes('mp4') ? 'mp4' : 'mp4'; // Always name mp4
+                    const blob = new Blob(recordedChunks, { type: options.mimeType });
+                    const url = URL.createObjectURL(blob); 
+                    const a = document.createElement('a'); document.body.appendChild(a);
+                    a.style = 'display: none'; a.href = url;
+                    a.download = `D_News_${languageSelect.value}_Broadcast_${new Date().getTime()}.${format}`;
+                    a.click(); window.URL.revokeObjectURL(url);
+                    
+                    document.getElementById('recordingStatus').classList.add('hidden');
+                    btnPlayAndRecord.disabled = false;
+                    btnPlayOnly.disabled = false;
+                    playIcon.classList.replace('fa-pause', 'fa-play');
+                    playText.innerText = "Play Video";
+                    isRecording = false; 
+                    document.getElementById('videoCanvas').width = 720; document.getElementById('videoCanvas').height = 1280; 
+                    drawCanvasFrame(0);
+                };
+
+                mediaRecorder.start(); 
+                currentNewsIndex = 0;
+                audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
+                audioPlayer.play().then(() => {
+                    isPlaying = true; renderLoop();
+                });
+
+            } catch (err) { 
+                showErrorLog("Recording Error: Your browser may not support canvas capturing or this video codec format.");
+                document.getElementById('recordingStatus').classList.add('hidden'); 
+                isRecording = false; 
+                btnPlayAndRecord.disabled = false; 
+                btnPlayOnly.disabled = false;
+            }
+        });
+
+        audioPlayer.onended = () => {
+            currentNewsIndex++; 
+            if (currentNewsIndex < newsItems.length) {
+                audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
+                audioPlayer.play().then(() => { isPlaying = true; });
+            } else {
+                stopPlayback(); 
+                if(isRecording && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            }
+        };
+
+        function stopPlayback() {
+            audioPlayer.pause(); isPlaying = false; audioPlayer.currentTime = 0;
+            cancelAnimationFrame(animationFrameId);
+            document.getElementById('playbackProgress').style.width = '0%';
+            document.getElementById('timeCurrent').innerText = "00:00";
+            
+            if(!isRecording) {
+                playIcon.classList.replace('fa-pause', 'fa-play');
+                playText.innerText = "Play Video";
+                btnPlayOnly.disabled = false;
+                btnPlayAndRecord.disabled = false;
+            }
+            if (newsItems.length > 0) drawCanvasFrame(0);
+        }
+
+        function renderLoop() {
+            if (!isPlaying) return;
+            let volume = 0;
+            if (analyzer && dataArray) {
+                analyzer.getByteFrequencyData(dataArray);
+                let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                volume = sum / dataArray.length; 
+            }
+            drawCanvasFrame(performance.now() / 1000, audioPlayer.currentTime, volume);
+            
+            let overallTime = 0;
+            for(let i=0; i<currentNewsIndex; i++) overallTime += (newsItems[i].duration || 0);
+            overallTime += audioPlayer.currentTime;
+            
+            document.getElementById('timeCurrent').innerText = formatTime(overallTime);
+            document.getElementById('playbackProgress').style.width = `${(overallTime / totalDuration) * 100}%`;
+            
+            animationFrameId = requestAnimationFrame(renderLoop);
+        }
+
+        // ==== CANVAS RENDER (CNN/BBC STYLE LOGO) ====
+        function drawCanvasFrame(timeInSeconds, currentAudioTime = 0, volume = 0) {
+            const width = document.getElementById('videoCanvas').width;
+            const height = document.getElementById('videoCanvas').height;
+            const item = newsItems[currentNewsIndex];
+
+            canvasContext.clearRect(0, 0, width, height);
+            
+            if (anchorImageObj) {
+                const scale = Math.max(width / anchorImageObj.width, height / anchorImageObj.height);
+                const finalScale = scale * (1 + (Math.sin(timeInSeconds * 0.3) * 0.015)); 
+                const volumeYShift = (volume / 255) * 4; 
+                
+                const scaledWidth = anchorImageObj.width * finalScale;
+                const scaledHeight = anchorImageObj.height * finalScale;
+                const offsetX = (width - scaledWidth) / 2;
+                const offsetY = (height - scaledHeight) / 2 + volumeYShift;
+                
+                canvasContext.drawImage(anchorImageObj, offsetX, offsetY, scaledWidth, scaledHeight);
+            } else {
+                const bgGradient = canvasContext.createRadialGradient(width/2, height/2, width*0.1, width/2, height/2, height);
+                bgGradient.addColorStop(0, '#7f1d1d'); 
+                bgGradient.addColorStop(1, '#020617'); 
+                canvasContext.fillStyle = bgGradient; canvasContext.fillRect(0,0,width,height);
+                
+                canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.1)'; canvasContext.lineWidth = 1.5;
+                const offset = (timeInSeconds * 15) % 50;
+                for(let i=-50; i<width; i+=50) { canvasContext.beginPath(); canvasContext.moveTo(i + offset,0); canvasContext.lineTo(i + offset,height); canvasContext.stroke(); }
+                for(let i=0; i<height; i+=50) { canvasContext.beginPath(); canvasContext.moveTo(0,i); canvasContext.lineTo(width,i); canvasContext.stroke(); }
+            }
+
+            const logoX = width * 0.05;
+            const logoY = height * 0.04;
+            const logoBoxH = height * 0.045; 
+            const logoBoxW = logoBoxH * 1.2;
+
+            canvasContext.shadowColor = 'rgba(0,0,0,0.5)'; canvasContext.shadowBlur = 8;
+            
+            canvasContext.fillStyle = '#cc0000'; 
+            canvasContext.fillRect(logoX, logoY, logoBoxW, logoBoxH);
+            
+            canvasContext.fillStyle = 'white'; 
+            canvasContext.font = `900 ${logoBoxH * 0.8}px Montserrat, sans-serif`; 
+            canvasContext.textAlign = 'center'; 
+            canvasContext.textBaseline = 'middle'; 
+            canvasContext.fillText("D", logoX + (logoBoxW/2), logoY + (logoBoxH/2) + 2);
+            
+            canvasContext.textAlign = 'left'; 
+            canvasContext.font = `900 ${logoBoxH * 0.8}px Montserrat, sans-serif`; 
+            canvasContext.fillText("NEWS", logoX + logoBoxW + 6, logoY + (logoBoxH/2) + 2);
+            canvasContext.shadowBlur = 0;
+            
+            canvasContext.fillStyle = '#ef4444'; canvasContext.font = `bold ${height * 0.02}px sans-serif`; canvasContext.textAlign = 'right';
+            if (Math.floor(timeInSeconds * 2) % 2 === 0) canvasContext.fillText("● LIVE", width * 0.95, height * 0.06);
+
+            const textBgHeight = height * 0.45, textBgY = height - textBgHeight;
+            const textBgGradient = canvasContext.createLinearGradient(0, textBgY, 0, height);
+            textBgGradient.addColorStop(0, 'rgba(0, 0, 0, 0)'); textBgGradient.addColorStop(0.2, 'rgba(0, 0, 0, 0.9)'); textBgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
+            canvasContext.fillStyle = textBgGradient; canvasContext.fillRect(0, textBgY, width, textBgHeight);
+
+            if (dataArray && isPlaying) {
+                const barWidth = width / 30; canvasContext.fillStyle = 'rgba(239, 68, 68, 0.4)'; 
+                for(let i=0; i<30; i++) {
+                    const barHeight = (dataArray[i*2] || 0) * 0.6; 
+                    canvasContext.fillRect(i * barWidth, textBgY + (height*0.1) - barHeight, barWidth - 2, barHeight);
+                }
+            }
+
+            if (item) {
+                let subText = "";
+                if (item.subtitles) {
+                    for (let sub of item.subtitles) {
+                        if (currentAudioTime >= sub.start && currentAudioTime <= sub.end) { subText = sub.text; break; }
+                    }
+                }
+                const contentX = width * 0.06, maxWidth = width * 0.88;
+                
+                canvasContext.textAlign = 'left'; canvasContext.fillStyle = '#cc0000'; 
+                const catStr = item.category ? item.category.toUpperCase() : "BREAKING";
+                canvasContext.font = `bold ${height * 0.018}px sans-serif`;
+                const catW = canvasContext.measureText(catStr).width + 24, catH = height * 0.035, catY = textBgY + (height * 0.1);
+                canvasContext.fillRect(contentX, catY, catW, catH);
+                canvasContext.fillStyle = 'white'; canvasContext.textBaseline = 'middle';
+                canvasContext.fillText(catStr, contentX + 12, catY + (catH/2) + 2);
+
+                canvasContext.fillStyle = '#ffffff';
+                const isBurmese = languageSelect.value === 'Burmese';
+                const hlFontSize = isBurmese ? height * 0.032 : height * 0.028;
+                canvasContext.font = `bold ${hlFontSize}px Padauk, sans-serif`; canvasContext.textBaseline = 'top';
+                const subY = wrapTextWordBoundary(canvasContext, item.headline, contentX, catY + catH + 15, maxWidth, hlFontSize * 1.4);
+                
+                canvasContext.fillStyle = '#e2e8f0'; 
+                const subFontSize = isBurmese ? height * 0.026 : height * 0.022;
+                canvasContext.font = `bold ${subFontSize}px Padauk, sans-serif`;
+                wrapTextWordBoundary(canvasContext, subText, contentX, subY + 20, maxWidth, subFontSize * 1.5);
+            }
+        }
+
+        function wrapTextWordBoundary(ctx, text, x, y, maxWidth, lineHeight) {
+            if(!text) return y;
+            let segments = [];
+            
+            if (window.Intl && Intl.Segmenter) {
+                const segmenter = new Intl.Segmenter('my', { granularity: 'word' });
+                segments = Array.from(segmenter.segment(text)).map(s => s.segment);
+            } else {
+                segments = text.split(/(?=[ \n])|(?<=[ \n])/);
+            }
+            
+            let line = '', currentY = y;
+            for (let n = 0; n < segments.length; n++) {
+                let testLine = line + segments[n]; 
+                let metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && n > 0 && line.trim() !== '') { 
+                    ctx.fillText(line.trim(), x, currentY); 
+                    line = segments[n]; 
+                    currentY += lineHeight; 
+                } else {
+                    line = testLine;
+                }
+            }
+            if (line.trim() !== '') ctx.fillText(line.trim(), x, currentY); 
+            return currentY + lineHeight;
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === Infinity || seconds < 0) return "00:00";
+            const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
