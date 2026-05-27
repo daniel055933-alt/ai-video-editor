@@ -3,196 +3,327 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D News - Professional Broadcast Studio</title>
+    <title>D Studio - Premium AI Creator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Padauk:wght@400;700&display=swap');
         
-        body {
-            font-family: 'Padauk', sans-serif;
-            background-color: #0f172a; 
-            color: #e2e8f0;
-        }
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
-        }
-        .video-container {
-            width: 100%;
-            max-width: 420px; 
-            margin: 0 auto;
-            position: relative;
-        }
-        canvas {
-            width: 100%;
-            height: auto;
-            aspect-ratio: 9 / 16; 
+        body { 
+            font-family: 'Padauk', sans-serif; 
             background-color: #020617;
-            border-radius: 8px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-            display: block;
+            color: #e2e8f0; 
+            overflow: hidden; 
         }
-        .loader {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-left-color: #ef4444; 
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
+        
+        .glass-card { 
+            background: #0f172a; 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border-radius: 24px; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+
+        .logo-font { font-family: 'Montserrat', sans-serif; }
+        .app-logo-box { background-color: #dc2626; color: white; padding: 0.2rem 0.6rem; border-radius: 8px; line-height: 1; }
+        
+        .video-container { width: 100%; max-width: 420px; margin: 0 auto; position: relative; }
+        canvas { width: 100%; height: auto; aspect-ratio: 9/16; background-color: #000; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); display: block; border: 1px solid #1e293b; }
+        
+        .loader { border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #ef4444; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
         .loader-small { width: 14px; height: 14px; border-width: 2px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        .logo-font { font-family: 'Montserrat', sans-serif; }
-        
-        .news-logo-box {
-            background-color: #cc0000;
-            color: white;
-            padding: 0.1rem 0.5rem;
-            line-height: 1;
-        }
         
         #progressTrack { cursor: pointer; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .tab-active { background-color: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: bold; }
+        .tab-inactive { color: #94a3b8; background-color: transparent; border: 1px solid transparent; font-weight: 600; }
+        .tab-inactive:hover { background-color: rgba(30, 41, 59, 0.5); color: #e2e8f0; }
     </style>
 </head>
-<body class="min-h-screen p-3 md:p-6 flex flex-col items-center">
+<body class="h-screen w-full flex items-center justify-center relative">
 
-    <div class="w-full max-w-6xl flex flex-col gap-6">
-        
-        <!-- Header -->
-        <header class="w-full flex flex-col md:flex-row items-center justify-between pb-4 border-b border-slate-700/80 gap-4">
-            <div class="flex items-center gap-1 cursor-pointer shrink-0 mx-auto md:mx-0">
-                <div class="news-logo-box font-black text-3xl md:text-4xl logo-font tracking-tighter">D</div>
-                <div class="text-white font-black text-3xl md:text-4xl logo-font tracking-tighter ml-1">NEWS</div>
+    <!-- ================= LOGIN SCREEN ================= -->
+    <div id="loginScreen" class="w-full max-w-md glass-card p-10 flex flex-col gap-6 transform transition-all duration-500 z-50">
+        <div class="flex flex-col items-center justify-center mb-2">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="app-logo-box font-black text-4xl logo-font tracking-tighter">D</div>
+                <div class="text-white font-black text-4xl logo-font tracking-tighter">STUDIO</div>
             </div>
-            <div class="text-slate-400 text-sm font-semibold uppercase tracking-widest mx-auto md:mx-0">
-                <i class="fa-solid fa-satellite-dish text-red-500 mr-2"></i> Broadcast Studio
-            </div>
-        </header>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest text-center mt-1">Premium Creator App</p>
+        </div>
 
-        <!-- Main Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
-            
-            <!-- Panel 1: Generate -->
-            <div class="lg:col-span-5 glass-panel p-5 flex flex-col gap-4 h-fit">
-                <h2 class="text-base md:text-lg font-bold text-red-500 border-b border-slate-700 pb-2 uppercase tracking-wide">
-                    <i class="fa-solid fa-tower-broadcast mr-2"></i> 1. Prepare Broadcast
-                </h2>
-                
-                <div>
-                    <label class="text-xs text-slate-400 font-semibold mb-1 block uppercase">Broadcast Language</label>
-                    <div class="flex items-center bg-slate-800 p-2.5 rounded border border-slate-600 shadow-inner">
-                        <div class="px-2 text-red-400"><i class="fa-solid fa-language"></i></div>
-                        <select id="languageSelect" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer w-full">
-                            <option value="Burmese">မြန်မာ (Myanmar)</option>
-                            <option value="English">English</option>
-                            <option value="Korean">한국어 (Korean)</option>
-                            <option value="Japanese">日本語 (Japanese)</option>
-                            <option value="Thai">ภาษาไทย (Thai)</option>
-                        </select>
-                    </div>
+        <div id="loginError" class="hidden bg-red-950/50 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center"></div>
+
+        <div class="flex flex-col gap-5">
+            <div>
+                <label class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block ml-1">Username</label>
+                <div class="flex items-center bg-[#1e293b] p-3.5 rounded-xl border border-slate-700 focus-within:border-red-500 transition-colors">
+                    <i class="fa-solid fa-user text-slate-500 w-6 ml-1"></i>
+                    <input type="text" id="usernameInput" placeholder="Enter your username" class="bg-transparent w-full text-white focus:outline-none ml-2 text-sm">
                 </div>
+            </div>
+            
+            <div>
+                <label class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block ml-1">Password</label>
+                <div class="flex items-center bg-[#1e293b] p-3.5 rounded-xl border border-slate-700 focus-within:border-red-500 transition-colors">
+                    <i class="fa-solid fa-lock text-slate-500 w-6 ml-1"></i>
+                    <input type="password" id="passwordInput" placeholder="Enter your password" class="bg-transparent w-full text-white focus:outline-none ml-2 text-sm">
+                </div>
+            </div>
 
-                <p class="text-xs text-slate-400 leading-relaxed mt-1">
-                    <i class="fa-solid fa-circle-info text-blue-400 mr-1"></i> ကမ္ဘာအရေး၊ နည်းပညာ၊ အားကစား၊ စမတ်ဖုန်း၊ ငွေကြေး သတင်း ၅ ပုဒ်ကို အသေးစိတ် အလိုအလျောက် ရှာဖွေတင်ဆက်ပေးပါမည်။
-                </p>
+            <button id="btnLogin" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-4 rounded-xl mt-4 uppercase tracking-wider text-sm transition-all shadow-[0_4px_14px_rgba(220,38,38,0.4)]">
+                Login to Studio
+            </button>
+        </div>
+        <p class="text-[11px] text-center text-slate-500 mt-2">
+            <i class="fa-solid fa-circle-info"></i> အကောင့်ဖွင့်ရန်နှင့် Credit ဝယ်ယူရန် Admin ထံ ဆက်သွယ်ပါ။
+        </p>
+    </div>
 
-                <button id="btnGenerate" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-4 rounded transition-all flex items-center justify-center gap-2 shadow-lg uppercase tracking-wider text-sm mt-2">
-                    <i class="fa-solid fa-satellite-dish"></i> Generate In-depth News
+    <!-- ================= MAIN APP SHELL ================= -->
+    <div id="appShell" class="hidden h-screen w-full flex bg-[#020617]">
+        
+        <!-- LEFT SIDEBAR -->
+        <aside class="w-64 bg-[#0B1120] border-r border-slate-800/60 flex flex-col justify-between hidden md:flex shrink-0">
+            <div class="p-6 flex items-center gap-2 border-b border-slate-800/60 mb-4">
+                <div class="app-logo-box font-black text-2xl logo-font tracking-tighter">D</div>
+                <div class="text-white font-black text-xl logo-font tracking-tighter">STUDIO</div>
+            </div>
+
+            <nav class="flex-1 px-4 space-y-2">
+                <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 mt-2">Applications</p>
+                
+                <button id="navGhost" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-active">
+                    <i class="fa-solid fa-ghost text-lg w-6 text-left"></i> 
+                    <span>D Ghost</span>
+                </button>
+                
+                <button id="navNews" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-inactive">
+                    <i class="fa-solid fa-satellite-dish text-lg w-6 text-left"></i> 
+                    <span>D News</span>
                 </button>
 
-                <!-- Status -->
-                <div id="statusContainer" class="hidden p-4 bg-slate-900 rounded border border-red-500/30 shadow-inner mt-2">
-                    <div class="flex items-center gap-2 text-red-400 text-sm font-semibold mb-2">
-                        <div class="loader" id="statusLoader"></div> <span id="statusText">Starting Studio...</span>
-                    </div>
-                    <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
-                        <div id="generationProgress" class="bg-red-500 h-full w-0 transition-all shadow-[0_0_8px_#ef4444]"></div>
-                    </div>
-                    <p id="errorLog" class="text-xs text-red-400 mt-3 hidden bg-red-950/80 p-3 rounded font-mono break-words leading-relaxed border border-red-800"></p>
-                </div>
-            </div>
-
-            <!-- Panel 2: Video Player -->
-            <div class="lg:col-span-7 glass-panel p-5 flex flex-col items-center">
-                <h2 class="text-base md:text-lg font-bold mb-4 text-emerald-400 border-b border-slate-700 pb-2 w-full text-left uppercase tracking-wide">
-                    <i class="fa-solid fa-circle-play mr-2"></i> 2. Player & Auto-Record
-                </h2>
+                <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 mt-6">Settings</p>
                 
-                <div class="video-container flex-grow flex items-center justify-center mb-4">
-                    <canvas id="videoCanvas" width="720" height="1280"></canvas>
-                    
-                    <div id="canvasOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-10 rounded border border-slate-700 backdrop-blur-sm">
-                        <div class="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mb-4 border border-red-500/30">
-                            <i class="fa-solid fa-video-slash text-2xl text-red-500"></i>
+                <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all tab-inactive opacity-50 cursor-not-allowed">
+                    <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-left"></i> 
+                    <span>History</span>
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800/60">
+                <div class="bg-[#1e293b] rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 shrink-0">
+                            <i class="fa-solid fa-user"></i>
                         </div>
-                        <p class="text-slate-300 text-sm font-semibold uppercase tracking-widest">Studio Standby</p>
+                        <div class="flex flex-col overflow-hidden">
+                            <span id="displayName" class="text-sm font-bold text-white truncate">User</span>
+                            <span class="text-xs text-emerald-400 font-mono font-bold mt-0.5"><i class="fa-solid fa-coins text-[10px]"></i> <span id="creditDisplay">0</span> Credits</span>
+                        </div>
+                    </div>
+                    <button id="btnLogout" class="w-full bg-slate-800 hover:bg-red-950 hover:text-red-400 text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2 mt-1">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-8 w-full relative">
+            
+            <div class="max-w-6xl mx-auto mb-8">
+                <h1 id="pageTitle" class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">Create Your Story.</h1>
+                <p id="pageSubtitle" class="text-slate-400 text-sm">Professional horror video generation toolset v1.0</p>
+            </div>
+
+            <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Panel 1: Generate -->
+                <div class="lg:col-span-5 glass-card p-6 md:p-8 flex flex-col gap-5 h-fit relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-3xl rounded-full pointer-events-none"></div>
+
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center text-red-500">
+                            <i class="fa-solid fa-book-skull text-lg" id="panelIcon"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-white" id="panelTitle">AI Ghost Story Gen</h2>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <label class="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider ml-1">Language</label>
+                        <div class="flex items-center bg-[#1e293b] p-3.5 rounded-xl border border-slate-700 focus-within:border-red-500 transition-colors">
+                            <i class="fa-solid fa-earth-asia text-slate-500 ml-1"></i>
+                            <select id="languageSelect" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer w-full ml-3 appearance-none">
+                                <option value="Burmese">မြန်မာ (Myanmar)</option>
+                                <option value="English">English</option>
+                                <option value="Korean">한국어 (Korean)</option>
+                                <option value="Japanese">日本語 (Japanese)</option>
+                                <option value="Thai">ภาษาไทย (Thai)</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down text-slate-500 text-xs pointer-events-none pr-2"></i>
+                        </div>
+                    </div>
+
+                    <p id="panelDescription" class="text-xs text-slate-400 leading-relaxed mt-1">
+                        ကမ္ဘာတဝှမ်းမှ မတူညီသော စိတ်ဝင်စားဖွယ်ရာ သရဲဇာတ်လမ်းတစ်ပုဒ်ကို ၂ မိနစ်စာ အလိုအလျောက် ရှာဖွေ တင်ဆက်ပေးပါမည်။
+                    </p>
+
+                    <button id="btnGenerate" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(220,38,38,0.3)] uppercase tracking-wider text-sm mt-4">
+                        <i class="fa-solid fa-bolt"></i> <span id="generateBtnText">Generate Story (-1 Credit)</span>
+                    </button>
+
+                    <!-- Status Display -->
+                    <div id="statusContainer" class="hidden p-5 bg-[#020617] rounded-xl border border-slate-800 mt-2">
+                        <div class="flex items-center gap-3 text-emerald-400 text-sm font-bold mb-3" id="statusHeader">
+                            <div class="loader loader-small border-emerald-500 border-l-transparent" id="statusLoader"></div> 
+                            <span id="statusText">Processing...</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div id="generationProgress" class="bg-emerald-500 h-full w-0 transition-all shadow-[0_0_8px_#10b981]"></div>
+                        </div>
+                        <p id="errorLog" class="text-xs text-red-400 mt-4 hidden bg-red-950/50 p-3 rounded-lg border border-red-900/50 leading-relaxed break-words"></p>
                     </div>
                 </div>
 
-                <!-- Record Settings & Play Buttons -->
-                <div class="w-full bg-slate-900 p-4 rounded border border-slate-700 shadow-inner">
+                <!-- Panel 2: Video Player & Output -->
+                <div class="lg:col-span-7 flex flex-col gap-6">
                     
-                    <div class="flex items-center justify-between mb-4">
-                        <label class="text-xs text-slate-400 font-bold uppercase tracking-wider">Export Res (MP4):</label>
-                        <select id="resolutionSelect" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white focus:outline-none text-xs font-mono">
-                            <option value="1920">1080x1920 (FHD)</option>
-                            <option value="1280" selected>720x1280 (HD)</option>
-                            <option value="854">480x854 (SD)</option>
-                        </select>
-                    </div>
-
-                    <div class="flex flex-col items-center justify-center gap-4">
-                        <div class="w-full flex items-center justify-between">
-                            <span class="text-xs text-red-400 font-mono font-bold" id="timeCurrent">00:00</span>
-                            <div class="w-full mx-3 bg-slate-800 h-1.5 rounded-full overflow-hidden relative" id="progressTrack">
-                                <div id="playbackProgress" class="bg-red-600 h-full w-0 shadow-[0_0_8px_#dc2626] absolute top-0 left-0 pointer-events-none"></div>
+                    <!-- Player Card -->
+                    <div class="glass-card p-6 md:p-8 flex flex-col items-center">
+                        <div class="w-full flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-500">
+                                    <i class="fa-solid fa-display text-lg"></i>
+                                </div>
+                                <h2 class="text-lg font-bold text-white">Preview & Export</h2>
                             </div>
-                            <span class="text-xs text-slate-500 font-mono" id="timeTotal">00:00</span>
+                            
+                            <div class="flex items-center gap-2 bg-[#1e293b] border border-slate-700 rounded-lg px-3 py-1.5">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">RES:</span>
+                                <select id="resolutionSelect" class="bg-transparent text-white focus:outline-none text-xs font-mono font-bold cursor-pointer appearance-none outline-none">
+                                    <option value="1920">1080x1920</option>
+                                    <option value="1280" selected>720x1280</option>
+                                    <option value="854">480x854</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="video-container flex-grow flex items-center justify-center mb-6 w-full">
+                            <canvas id="videoCanvas" width="720" height="1280"></canvas>
+                            
+                            <div id="canvasOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#0f172a]/80 z-10 rounded-2xl backdrop-blur-sm border border-slate-800">
+                                <div class="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mb-4 border border-slate-700">
+                                    <i class="fa-solid fa-video-slash text-3xl text-slate-500"></i>
+                                </div>
+                                <p class="text-slate-400 text-sm font-bold uppercase tracking-widest" id="standbyText">Ready to Generate</p>
+                            </div>
                         </div>
 
-                        <!-- Buttons -->
-                        <div class="w-full flex flex-col sm:flex-row items-center gap-2">
-                            <button id="btnPlayOnly" class="w-full sm:w-2/5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-3 rounded transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
-                                <i class="fa-solid fa-play fa-lg" id="playIcon"></i> <span id="playText">Play Video</span>
-                            </button>
-                            <button id="btnStop" class="w-full sm:w-1/5 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-3 rounded transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
-                                <i class="fa-solid fa-stop fa-lg"></i> Stop
-                            </button>
-                            <button id="btnPlayAndRecord" class="w-full sm:w-2/5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-3 rounded transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
-                                <i class="fa-solid fa-record-vinyl fa-lg"></i> Play & Save
-                            </button>
+                        <!-- Player Controls -->
+                        <div class="w-full bg-[#020617] p-5 rounded-2xl border border-slate-800">
+                            <div class="w-full flex items-center justify-between gap-4 mb-5">
+                                <span class="text-xs text-red-500 font-mono font-bold w-10 text-right" id="timeCurrent">00:00</span>
+                                <div class="flex-grow bg-slate-800 h-2 rounded-full overflow-hidden relative" id="progressTrack">
+                                    <div id="playbackProgress" class="bg-red-600 h-full w-0 absolute top-0 left-0 pointer-events-none rounded-full"></div>
+                                </div>
+                                <span class="text-xs text-slate-500 font-mono font-bold w-10" id="timeTotal">00:00</span>
+                            </div>
+
+                            <div class="w-full flex flex-col sm:flex-row items-center gap-3">
+                                <button id="btnPlayOnly" class="w-full sm:w-2/5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs shadow-[0_4px_10px_rgba(37,99,235,0.3)]" disabled>
+                                    <i class="fa-solid fa-play fa-lg" id="playIcon"></i> <span id="playText">Play</span>
+                                </button>
+                                <button id="btnStop" class="w-full sm:w-1/5 bg-[#1e293b] hover:bg-slate-700 text-white font-bold py-3.5 px-3 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
+                                    <i class="fa-solid fa-stop fa-lg"></i>
+                                </button>
+                                <button id="btnPlayAndRecord" class="w-full sm:w-2/5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs shadow-[0_4px_10px_rgba(16,185,129,0.3)]" disabled>
+                                    <i class="fa-solid fa-record-vinyl fa-lg"></i> Export MP4
+                                </button>
+                            </div>
+
+                            <div id="recordingStatus" class="hidden mt-4 p-3 bg-red-950/40 rounded-xl border border-red-900/50 text-center">
+                                <div class="loader loader-small border-red-500 border-l-transparent mb-2"></div>
+                                <p class="text-red-400 text-xs font-bold uppercase tracking-widest animate-pulse" id="recordingText">● Recording in Progress</p>
+                                <p class="text-[10px] text-slate-500 mt-1">Please wait until the video finishes.</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div id="recordingStatus" class="hidden mt-3 p-3 bg-red-900/20 rounded border border-red-500/30 text-center">
-                        <div class="loader loader-small border-red-500/40 border-l-red-500 mb-2"></div>
-                        <p class="text-red-400 text-xs font-bold uppercase tracking-widest animate-pulse" id="recordingText">● Recording Broadcast</p>
-                        <p class="text-[10px] text-slate-400 mt-1">Please wait until the end of the broadcast.</p>
+                    <!-- NEW: Social Media Caption Box -->
+                    <div id="captionContainer" class="hidden w-full glass-card p-6 md:p-8 relative shadow-lg">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fa-brands fa-tiktok text-emerald-400 text-lg"></i> Social Media Caption
+                            </span>
+                            <button id="btnCopyCaption" class="text-xs font-bold bg-[#1e293b] hover:bg-slate-700 px-4 py-2 rounded-lg transition-colors border border-slate-700 text-white flex items-center gap-2">
+                                <i class="fa-regular fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-3">Copy this highly engaging hook and hashtags to post on TikTok, FB Reels, or YouTube Shorts.</p>
+                        <textarea id="captionText" class="w-full bg-[#020617] text-sm text-slate-300 p-4 rounded-xl border border-slate-800 focus:outline-none focus:border-red-500 resize-none h-40 custom-scrollbar leading-relaxed" readonly></textarea>
                     </div>
 
                 </div>
             </div>
-
-        </div>
+        </main>
     </div>
 
     <audio id="audioPlayer" class="hidden" crossorigin="anonymous"></audio>
 
-    <script>
-        // ==== Environment Configuration ====
-        const apiKey = ""; // Handled automatically by the execution environment
-        const modelName = 'gemini-2.5-flash-preview-09-2025'; 
-        
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+
+        // ==== Firebase Setup ====
+        const firebaseConfig = {
+            apiKey: "AIzaSyBc7vKszxGtSCrrQ_HnoWnsFwFiwhyhpsQ",
+            authDomain: "dghoststory.firebaseapp.com",
+            projectId: "dghoststory",
+            storageBucket: "dghoststory.firebasestorage.app",
+            messagingSenderId: "234910284312",
+            appId: "1:234910284312:web:202b71c68d21292d7fe16d",
+            measurementId: "G-EQTL6DKGPL"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // ==== Gemini Config ====
+        const geminiApiKey = ""; // Handled by platform env
+        const modelName = 'gemini-2.5-flash-preview-09-2025';
+
+        // ==== App State ====
+        let currentAppMode = 'ghost'; 
+        let currentUser = null;
+        let currentCredits = 0;
+        let creditListenerUnsubscribe = null;
+        let currentCaption = "";
+
         // ==== UI Elements ====
+        const loginScreen = document.getElementById('loginScreen');
+        const appShell = document.getElementById('appShell');
+        const usernameInput = document.getElementById('usernameInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const btnLogin = document.getElementById('btnLogin');
+        const btnLogout = document.getElementById('btnLogout');
+        const loginError = document.getElementById('loginError');
+        const displayName = document.getElementById('displayName');
+        const creditDisplay = document.getElementById('creditDisplay');
+        
+        const navGhost = document.getElementById('navGhost');
+        const navNews = document.getElementById('navNews');
+        const pageTitle = document.getElementById('pageTitle');
+        const pageSubtitle = document.getElementById('pageSubtitle');
+        const panelTitle = document.getElementById('panelTitle');
+        const panelDescription = document.getElementById('panelDescription');
+        const panelIcon = document.getElementById('panelIcon');
+        const generateBtnText = document.getElementById('generateBtnText');
+        
         const btnGenerate = document.getElementById('btnGenerate');
         const languageSelect = document.getElementById('languageSelect');
         const resolutionSelect = document.getElementById('resolutionSelect');
@@ -203,109 +334,271 @@
         const btnPlayAndRecord = document.getElementById('btnPlayAndRecord');
         const progressTrack = document.getElementById('progressTrack');
         const errorLog = document.getElementById('errorLog');
+        const standbyText = document.getElementById('standbyText');
 
-        // Date String
-        const now = new Date();
-        const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-        const currentDateStr = now.toLocaleDateString('en-US', dateOptions);
+        const captionContainer = document.getElementById('captionContainer');
+        const captionText = document.getElementById('captionText');
+        const btnCopyCaption = document.getElementById('btnCopyCaption');
 
-        // ==== SUPER ROBUST FETCH WITH EXPONENTIAL BACKOFF ====
-        async function fetchWithRetry(urlBase, payload, maxRetries = 5) {
-            const delays = [1000, 2000, 4000, 8000, 16000]; 
+        // Copy logic
+        btnCopyCaption.addEventListener('click', () => {
+            captionText.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            btnCopyCaption.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Copied!`;
+            setTimeout(() => {
+                btnCopyCaption.innerHTML = `<i class="fa-regular fa-copy"></i> Copy`;
+            }, 2000);
+        });
+
+        // ==== TAB SWITCHING LOGIC ====
+        navGhost.addEventListener('click', () => switchTab('ghost'));
+        navNews.addEventListener('click', () => switchTab('news'));
+
+        function switchTab(mode) {
+            if (isGenerating || isRecording) {
+                console.log("Please wait until current process finishes.");
+                return;
+            }
             
+            currentAppMode = mode;
+            stopPlayback();
+            document.getElementById('canvasOverlay').classList.remove('hidden');
+            captionContainer.classList.add('hidden');
+            
+            newsItems = [];
+            anchorImageObj = null;
+            mainStoryHeadline = "";
+            currentCaption = "";
+            drawCanvasFrame(0);
+
+            if (mode === 'ghost') {
+                navGhost.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-active";
+                navNews.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-inactive";
+                
+                panelIcon.className = "fa-solid fa-book-skull text-lg";
+                pageTitle.innerText = "Create Your Story.";
+                pageSubtitle.innerText = "Professional horror video generation toolset v1.0";
+                panelTitle.innerText = "AI Ghost Story Gen";
+                panelDescription.innerText = "ကမ္ဘာတဝှမ်းမှ မတူညီသော စိတ်ဝင်စားဖွယ်ရာ သရဲဇာတ်လမ်းတစ်ပုဒ်ကို ၂ မိနစ်စာ အလိုအလျောက် ရှာဖွေ တင်ဆက်ပေးပါမည်။";
+                generateBtnText.innerText = "Generate Story (-1 Credit)";
+                standbyText.innerText = "Ready to Spook";
+            } else {
+                navNews.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-active";
+                navGhost.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-inactive";
+                
+                panelIcon.className = "fa-solid fa-microphone-lines text-lg";
+                pageTitle.innerText = "Create Your Broadcast.";
+                pageSubtitle.innerText = "Professional news broadcast generation toolset v1.0";
+                panelTitle.innerText = "AI News Script Gen";
+                panelDescription.innerText = "ကမ္ဘာတဝန်းမှ အချိန်နှင့်တပြေးညီ (Up-to-date) ဖြစ်သော မတူညီသည့် သတင်း ၅ ပုဒ်ကို အလိုအလျောက် ရှာဖွေတင်ဆက်ပေးပါမည်။";
+                generateBtnText.innerText = "Generate Broadcast (-1 Credit)";
+                standbyText.innerText = "Ready to Broadcast";
+            }
+        }
+
+        // ==== LOGIN LOGIC ====
+        btnLogin.addEventListener('click', async () => {
+            const user = usernameInput.value.trim();
+            const pass = passwordInput.value.trim();
+            if (!user || !pass) return;
+
+            btnLogin.innerHTML = '<div class="loader loader-small border-white border-l-transparent"></div>';
+            loginError.classList.add('hidden');
+            
+            try {
+                const docRef = doc(db, "users", user);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const dbData = docSnap.data();
+                    let dbPassword = dbData.password || dbData.Password || dbData["password "] || "";
+                    dbPassword = String(dbPassword).trim();
+
+                    if (dbPassword === pass) {
+                        currentUser = user;
+                        displayName.innerText = dbData.name || user;
+                        
+                        creditListenerUnsubscribe = onSnapshot(docRef, (snap) => {
+                            if (snap.exists()) {
+                                currentCredits = parseInt(snap.data().credits) || 0;
+                                updateCreditUI();
+                            }
+                        });
+
+                        loginScreen.classList.add('hidden');
+                        appShell.classList.remove('hidden');
+                    } else {
+                        loginError.innerHTML = `Password မှားယွင်းနေပါသည်။<br><span class="text-xs text-slate-400 mt-1 block"><b>Hint:</b> သင့် Database တွင် <b>'${dbPassword}'</b> ဖြစ်နေပါသည်။</span>`;
+                        loginError.classList.remove('hidden');
+                    }
+                } else {
+                    loginError.innerHTML = `<b>'${user}'</b> ဆိုသော အကောင့်မရှိပါ။<br><span class="text-xs text-slate-400 mt-1 block">စာလုံးအကြီး/အသေး အတိအကျတူရပါမည်။</span>`;
+                    loginError.classList.remove('hidden');
+                }
+            } catch (error) {
+                loginError.innerHTML = `Database Error: ${error.message}`;
+                loginError.classList.remove('hidden');
+            } finally {
+                btnLogin.innerHTML = 'Login to Studio';
+            }
+        });
+
+        btnLogout.addEventListener('click', () => {
+            if (creditListenerUnsubscribe) creditListenerUnsubscribe();
+            currentUser = null;
+            usernameInput.value = "";
+            passwordInput.value = "";
+            appShell.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            stopPlayback();
+        });
+
+        function updateCreditUI() {
+            creditDisplay.innerText = currentCredits;
+            if (currentCredits <= 0) {
+                creditDisplay.parentElement.classList.replace('bg-emerald-900/30', 'bg-red-900/50');
+                creditDisplay.parentElement.classList.replace('border-emerald-500/30', 'border-red-500');
+                creditDisplay.parentElement.classList.replace('text-emerald-400', 'text-red-400');
+            } else {
+                creditDisplay.parentElement.classList.add('bg-emerald-900/30', 'border-emerald-500/30', 'text-emerald-400');
+                creditDisplay.parentElement.classList.remove('bg-red-900/50', 'border-red-500', 'text-red-400');
+            }
+        }
+
+        // ==== FETCH API ====
+        async function fetchWithRetry(urlBase, payload, maxRetries = 5) {
+            const delays = [2000, 4000, 8000, 16000, 32000]; 
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const url = `${urlBase}?key=${apiKey}`;
+                    const url = `${urlBase}?key=${geminiApiKey}`;
                     const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                     });
-                    
                     if (res.ok) return res;
-                    
                     if (i === maxRetries - 1) {
-                        const errText = await res.text();
-                        throw new Error(`API Error (${res.status}): ${errText}`);
+                        const errText = await res.text(); throw new Error(`API Error (${res.status}): ${errText}`);
                     }
                     await new Promise(resolve => setTimeout(resolve, delays[i]));
                 } catch (error) {
-                    if (i === maxRetries - 1) {
-                        throw new Error(error.message || `အင်တာနက်ချိတ်ဆက်မှု ပြဿနာ ဖြစ်ပွားနေပါသည်။ (Connection Error)`);
-                    }
+                    if (i === maxRetries - 1) throw new Error(error.message || `Connection Error`);
                     await new Promise(resolve => setTimeout(resolve, delays[i]));
                 }
             }
         }
 
-        // ==== STATE VARIABLES ====
-        let newsItems = [];
-        let isGenerating = false;
-        let currentNewsIndex = 0;
-        let isPlaying = false;
-        let animationFrameId;
+        // ==== GENERATION CONFIGS ====
+        let newsItems = []; let mainStoryHeadline = ""; let isGenerating = false;
+        let currentNewsIndex = 0; let isPlaying = false; let animationFrameId;
         let canvasContext = document.getElementById('videoCanvas').getContext('2d');
-        let totalDuration = 0;
-        let anchorImageObj = null;
-
-        let mediaRecorder;
-        let recordedChunks = [];
-        let isRecording = false;
+        let totalDuration = 0; let anchorImageObj = null;
+        let mediaRecorder; let recordedChunks = []; let isRecording = false;
         let audioContext, analyzer, dataArray;
 
-        const femaleAnchorStyles = [
+        const fallbackGhostImages = [
+            "https://images.unsplash.com/photo-1603525283401-499719323149?q=80&w=600&auto=format&fit=crop", 
+            "https://images.unsplash.com/photo-1508344928928-7137b2f4f22c?q=80&w=600&auto=format&fit=crop", 
+            "https://images.unsplash.com/photo-1541198642236-47b1c3127161?q=80&w=600&auto=format&fit=crop"
+        ];
+        const ghostImageStyles = [
+            "A cinematic, eerie ghost apparition in a dark abandoned mansion, dark and moody lighting, highly detailed horror photography, foggy atmosphere, 9:16 aspect ratio",
+            "A terrifying pale ghost woman in a white vintage dress standing at the end of a dark hallway, hyper-realistic, scary atmosphere, vertical 4k"
+        ];
+        const newsImageStyles = [
             "A cinematic beautiful female news anchor broadcasting live, modern news desk, glowing screens in background, highly detailed professional photography",
             "A serious professional female news reporter looking directly at camera, CNN TV studio background, 4k resolution"
         ];
         
-        // ==== 2. GENERATION WORKFLOW ====
+        // ==== GENERATION LOGIC ====
         btnGenerate.addEventListener('click', async () => {
             if (isGenerating) return;
             
+            if (currentCredits <= 0) {
+                document.getElementById('statusContainer').classList.remove('hidden');
+                document.getElementById('statusLoader').classList.add('hidden');
+                document.getElementById('statusText').innerText = "Credit မလုံလောက်ပါ! (သင့်အကောင့်တွင် ၀ သို့မဟုတ် အနုတ်ပြနေပါသည်)";
+                document.getElementById('statusText').classList.replace('text-emerald-400', 'text-red-500');
+                showErrorLog("Database ထဲတွင် Credit ပြန်ဖြည့်ပါ။");
+                return;
+            }
+            
             const targetLang = languageSelect.value;
             
-            isGenerating = true; newsItems = []; anchorImageObj = null;
-            btnGenerate.disabled = true; 
-            btnPlayOnly.disabled = true; btnStop.disabled = true; btnPlayAndRecord.disabled = true;
-            
+            isGenerating = true; newsItems = []; anchorImageObj = null; mainStoryHeadline = ""; currentCaption = "";
+            btnGenerate.disabled = true; btnPlayOnly.disabled = true; btnStop.disabled = true; btnPlayAndRecord.disabled = true;
             document.getElementById('statusContainer').classList.remove('hidden');
+            document.getElementById('statusLoader').classList.remove('hidden');
+            document.getElementById('statusText').classList.replace('text-red-500', 'text-emerald-400');
             errorLog.classList.add('hidden');
+            captionContainer.classList.add('hidden');
             stopPlayback();
             
             try {
                 updateStatus('Preparing Studio Background...', 5);
                 try {
-                    const avatarBase64 = await fetchImage(femaleAnchorStyles[Math.floor(Math.random() * femaleAnchorStyles.length)]);
+                    const promptArr = currentAppMode === 'ghost' ? ghostImageStyles : newsImageStyles;
+                    const randomPrompt = promptArr[Math.floor(Math.random() * promptArr.length)];
+                    const avatarBase64 = await fetchImage(randomPrompt);
+                    
+                    anchorImageObj = new Image(); anchorImageObj.crossOrigin = "anonymous";
                     if(avatarBase64) {
-                        anchorImageObj = new Image(); anchorImageObj.crossOrigin = "anonymous";
                         await new Promise(r => { anchorImageObj.onload = r; anchorImageObj.src = avatarBase64; });
+                    } else if (currentAppMode === 'ghost') {
+                        const randomFallback = fallbackGhostImages[Math.floor(Math.random() * fallbackGhostImages.length)];
+                        await new Promise(r => { anchorImageObj.onload = r; anchorImageObj.src = randomFallback; });
                     }
-                } catch(e) { console.warn("Avatar failed."); }
+                } catch(e) { console.warn("Background generation failed."); }
 
-                updateStatus(`Analyzing 5 Global News Topics...`, 15);
-                await fetchNewsWithRobustParsing(targetLang, modelName);
+                updateStatus(`Crafting Content...`, 25);
+                
+                if (currentAppMode === 'ghost') {
+                    await fetchStoryWithRobustParsing(targetLang, modelName);
+                } else {
+                    await fetchNewsWithRobustParsing(targetLang, modelName);
+                }
 
                 for (let i = 0; i < newsItems.length; i++) {
-                    updateStatus(`Generating Natural Voice (${i+1}/${newsItems.length})...`, 25 + ((i+1)/newsItems.length * 60));
-                    const fullText = newsItems[i].headline + "။ " + newsItems[i].paragraphs.join(" ");
-                    newsItems[i].audioUrl = await fetchAudio(fullText, targetLang);
+                    updateStatus(`Generating Voice (Part ${i+1}/${newsItems.length})...`, 30 + ((i+1)/newsItems.length * 50));
+                    let fullText = "";
+                    if (currentAppMode === 'ghost') {
+                        fullText = newsItems[i].paragraphs.join(" ");
+                    } else {
+                        fullText = newsItems[i].headline + "။ " + newsItems[i].paragraphs.join(" ");
+                    }
+                    newsItems[i].audioUrl = await fetchAudio(fullText, targetLang, currentAppMode);
+                    // Add delay to prevent TTS Rate Limit
+                    await new Promise(r => setTimeout(r, 2000));
                 }
 
                 let hasAudio = false;
-                for(let item of newsItems) if(item.audioUrl) hasAudio = true;
-                if (!hasAudio) throw new Error("အသံဖိုင် လုံးဝ ဖန်တီး၍ မရပါ။ API Error ဖြစ်နိုင်ပါသည်။");
+                for(let item of newsItems) if(item.audioUrl && !item.audioUrl.includes('translate_tts')) hasAudio = true;
+                if (!hasAudio) throw new Error("အသံဖိုင် ဖန်တီး၍ မရပါ။ (TTS API Failed)");
 
                 updateStatus('Syncing Teleprompter...', 90);
                 await setupDurationsAndSubtitles();
                 
                 updateStatus('Ready to Broadcast!', 100);
-                setTimeout(() => document.getElementById('statusContainer').classList.add('hidden'), 2000);
+
+                try {
+                    const userDocRef = doc(db, "users", currentUser);
+                    const userSnap = await getDoc(userDocRef);
+                    if (userSnap.exists()) {
+                        let currentVal = parseInt(userSnap.data().credits) || 0;
+                        await updateDoc(userDocRef, { credits: Math.max(0, currentVal - 1) });
+                    }
+                } catch (creditErr) { console.error("Credit update failed", creditErr); }
+
+                setTimeout(() => {
+                    document.getElementById('statusContainer').classList.add('hidden');
+                    
+                    if(currentCaption) {
+                        captionText.value = currentCaption;
+                        captionContainer.classList.remove('hidden');
+                    }
+                }, 2000);
                 
                 document.getElementById('canvasOverlay').classList.add('hidden');
-                
-                btnPlayOnly.disabled = false;
-                btnStop.disabled = false;
-                btnPlayAndRecord.disabled = false;
+                btnPlayOnly.disabled = false; btnStop.disabled = false; btnPlayAndRecord.disabled = false;
                 
                 currentNewsIndex = 0;
                 drawCanvasFrame(0);
@@ -322,108 +615,123 @@
             document.getElementById('statusText').innerText = text;
             document.getElementById('generationProgress').style.width = `${percent}%`;
             if (isError) {
-                document.getElementById('statusText').classList.replace('text-red-400', 'text-slate-400');
-                document.getElementById('generationProgress').classList.replace('bg-red-500', 'bg-slate-500');
+                document.getElementById('statusText').classList.replace('text-emerald-400', 'text-red-400');
+                document.getElementById('generationProgress').classList.replace('bg-emerald-500', 'bg-red-500');
             } else {
-                document.getElementById('statusText').classList.replace('text-slate-400', 'text-red-400');
-                document.getElementById('generationProgress').classList.replace('bg-slate-500', 'bg-red-500');
+                document.getElementById('statusText').classList.replace('text-red-400', 'text-emerald-400');
+                document.getElementById('generationProgress').classList.replace('bg-red-500', 'bg-emerald-500');
             }
         }
+        
         function showErrorLog(msg) { 
             errorLog.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2 text-lg"></i> <br>${msg.replace(/\n/g, '<br>')}`; 
             errorLog.classList.remove('hidden'); 
         }
 
-        // ==== ROBUST TEXT PARSING (Exact Greeting, 5 Topics) ====
-        async function fetchNewsWithRobustParsing(language, modelName) {
-            
-            let greeting = "";
-            if (language === "Burmese") {
-                greeting = "မင်္ဂလာပါ။";
-            } else if (language === "English") {
-                greeting = "Hello.";
-            } else if (language === "Thai") {
-                greeting = "สวัสดีค่ะ";
-            } else if (language === "Korean") {
-                greeting = "안녕하세요.";
-            } else if (language === "Japanese") {
-                greeting = "こんにちは。";
-            } else {
-                greeting = "Hello.";
-            }
+        // ================= GHOST PARSER =================
+        async function fetchStoryWithRobustParsing(language, modelName) {
+            let greeting = language === "Burmese" ? "မင်္ဂလာပါ။ ဒီနေ့အတွက် စိတ်ဝင်စားစရာ သရဲဇာတ်လမ်းတစ်ပုဒ်ကို တင်ဆက်ပေးပါမယ်။" : "Hello. Welcome to today's ghost story.";
+            let promptLangRule = language === "Burmese" ? "Language MUST be STRICTLY: Burmese. ALL text MUST be translated to natural sounding Burmese." : `Language MUST be STRICTLY: ${language}.`;
+            const randomSeed = Math.floor(Math.random() * 100000);
 
-            const prompt = `Act as an expert, engaging international female news anchor. Date: ${currentDateStr}.
-            Provide a broadcast of EXACTLY 5 DIFFERENT global news events in this order:
-            1. ကမ္ဘာအရေး (World News)
-            2. နည်းပညာ (Technology)
-            3. အားကစား (Sports)
-            4. စမတ်ဖုန်းသတင်း (Smartphone News)
-            5. ငွေကြေးသတင်း (Finance News)
+            const prompt = `Act as an expert storyteller. Provide EXACTLY ONE highly engaging ghost story.
+            Randomly choose an urban legend from: Japanese, Thai, American, European, Korean, or Burmese. Ensure high variety (Random Seed: ${randomSeed}). DO NOT ALWAYS CHOOSE MIRRORS.
+            Divide the story into EXACTLY 4 PARTS.
+            ${promptLangRule}
+            CRITICAL: Make each part detailed. Write 3 to 4 engaging paragraphs per part so the story is long enough.
+            The very first paragraph of PART 1 MUST start with exactly: "${greeting}".
             
-            Language MUST be STRICTLY: ${language}.
+            Reply ONLY with a valid JSON format. Format EXACTLY like this:
+            {
+              "main_headline": "Title of the Story",
+              "caption": "🔥 Viral social media hook, brief summary, and 5 hashtags (TikTok/FB style).",
+              "parts": [ 
+                { "paragraphs": ["${greeting} Paragraph 1...", "Paragraph 2...", "Paragraph 3..."] },
+                { "paragraphs": ["..."] },
+                { "paragraphs": ["..."] },
+                { "paragraphs": ["..."] }
+              ]
+            }`;
             
-            CRITICAL RULES:
-            - Keep it brief. Provide exactly 2 short paragraphs per story. The audio must take around 45 to 60 seconds maximum per story.
-            - Write in a highly natural, conversational spoken style. Use commas (,) frequently for natural pauses.
-            - First paragraph of the FIRST story (World News) MUST start with exactly: "${greeting}"
-            - DO NOT add any extra greetings or sign-offs other than the one specified.
-            
-            Reply ONLY with a valid JSON array. DO NOT use markdown blocks like \`\`\`json.
-            Format EXACTLY like this:
-            [ 
-              { "category": "ကမ္ဘာအရေး", "headline": "Headline 1", "paragraphs": ["${greeting} Paragraph 1...", "Paragraph 2..."] },
-              { "category": "နည်းပညာ", "headline": "Headline 2", "paragraphs": ["..."] },
-              { "category": "အားကစား", "headline": "Headline 3", "paragraphs": ["..."] },
-              { "category": "စမတ်ဖုန်း", "headline": "Headline 4", "paragraphs": ["..."] },
-              { "category": "ငွေကြေး", "headline": "Headline 5", "paragraphs": ["..."] }
-            ]`;
-            
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                tools: [{ "google_search": {} }],
-                generationConfig: { temperature: 0.3 } 
-            };
-
-            const urlBase = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-            const res = await fetchWithRetry(urlBase, payload);
+            const payload = { contents: [{ parts: [{ text: prompt }] }], tools: [{ "google_search": {} }], generationConfig: { temperature: 0.9 } };
+            const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, payload);
             const data = await res.json();
             let text = data.candidates[0].content.parts[0].text;
             
-            const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 try {
-                    newsItems = JSON.parse(jsonMatch[0]);
-                } catch(e) { throw new Error("AI မှ တင်ဆက်မှုပုံစံ မှားယွင်းနေပါသည်။ (JSON Parsing Error)"); }
-            } else {
-                throw new Error("AI failed to output proper JSON format.");
-            }
+                    const parsedData = JSON.parse(jsonMatch[0]);
+                    mainStoryHeadline = parsedData.main_headline;
+                    newsItems = parsedData.parts;
+                    currentCaption = parsedData.caption;
+                    if(!newsItems || newsItems.length === 0) throw new Error("No parts generated");
+                } catch(e) { throw new Error("AI Parsing Error"); }
+            } else { throw new Error("AI output format error."); }
+        }
+
+        // ================= NEWS PARSER (UPGRADED FOR LENGTH & VARIETY) =================
+        async function fetchNewsWithRobustParsing(language, modelName) {
+            let greeting = language === "Burmese" ? "မင်္ဂလာပါ။" : "Hello.";
+            const now = new Date(); 
+            const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const randomSeed = Math.floor(Math.random() * 100000);
+
+            const prompt = `Act as an expert female news anchor. Today's Date is: ${dateStr}.
+            CRITICAL: You MUST use Google Search to find the LATEST, UP-TO-DATE news. Ensure high variety (Random Seed: ${randomSeed}).
+            Provide EXACTLY 5 DIFFERENT global news events in this order:
+            1. World News  2. Technology  3. Sports  4. Smartphone News  5. Finance News
+            
+            Language MUST be STRICTLY: ${language}.
+            CRITICAL LENGTH FIX: Make each news item detailed and engaging. Write 3 to 4 paragraphs per story (about 80 to 100 words per story) so that it takes about 45 to 60 seconds to read each story. Do NOT make them extremely short. Provide good context and storytelling.
+            First paragraph of the FIRST story MUST start with exactly: "${greeting}"
+            
+            Reply ONLY with a valid JSON format. Format EXACTLY like this:
+            {
+              "caption": "🔥 Catchy viral hook for social media, brief summary, and 5-8 relevant hashtags.",
+              "items": [ 
+                { "category": "World", "headline": "Headline 1", "paragraphs": ["${greeting} Paragraph 1...", "Paragraph 2...", "Paragraph 3..."] },
+                { "category": "Tech", "headline": "Headline 2", "paragraphs": ["..."] },
+                { "category": "Sports", "headline": "Headline 3", "paragraphs": ["..."] },
+                { "category": "Phones", "headline": "Headline 4", "paragraphs": ["..."] },
+                { "category": "Finance", "headline": "Headline 5", "paragraphs": ["..."] }
+              ]
+            }`;
+            
+            const payload = { contents: [{ parts: [{ text: prompt }] }], tools: [{ "google_search": {} }], generationConfig: { temperature: 0.7 } };
+            const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, payload);
+            const data = await res.json();
+            let text = data.candidates[0].content.parts[0].text;
+            
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                try {
+                    const parsedData = JSON.parse(jsonMatch[0]);
+                    newsItems = parsedData.items;
+                    currentCaption = parsedData.caption;
+                } catch(e) { throw new Error("AI Parsing Error"); }
+            } else { throw new Error("AI output format error."); }
         }
 
         async function fetchImage(prompt) {
             try {
                 const payload = { instances: { prompt: prompt }, parameters: { sampleCount: 1, aspectRatio: "9:16" } };
-                const urlBase = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`;
-                
-                const res = await fetchWithRetry(urlBase, payload, 3);
+                const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`, payload, 3);
                 const data = await res.json();
                 if (data.predictions && data.predictions[0]) return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
             } catch(e) {}
             return null; 
         }
 
-        async function fetchAudio(text, language) {
+        async function fetchAudio(text, language, mode) {
             try {
+                const voiceInstruction = `Say in a natural, clear, and engaging conversational voice at a normal pace: ${text}`;
+                const voiceName = mode === 'ghost' ? 'Aoede' : 'Kore'; // Aoede for storytelling, Kore for news
                 const payload = {
-                    contents: [{ parts: [{ text: text }] }],
-                    generationConfig: { 
-                        responseModalities: ["AUDIO"], 
-                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } 
-                    },
-                    model: "gemini-2.5-flash-preview-tts"
+                    contents: [{ parts: [{ text: voiceInstruction }] }],
+                    generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } } } }
                 };
-                const urlBase = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`;
-                
-                const res = await fetchWithRetry(urlBase, payload);
+                const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`, payload);
                 const data = await res.json();
                 
                 if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
@@ -433,7 +741,6 @@
                 }
             } catch(e) { console.warn("TTS Error", e); }
             
-            // Public Google Translate Fallback
             const langMap = { 'Burmese': 'my', 'English': 'en', 'Korean': 'ko', 'Japanese': 'ja', 'Thai': 'th' };
             const tl = langMap[language] || 'en';
             return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 195))}&tl=${tl}&client=tw-ob`;
@@ -453,7 +760,6 @@
             return new Blob([view], { type: 'audio/wav' });
         }
 
-        // ==== AUDIO SYNC ====
         async function setupDurationsAndSubtitles() {
             totalDuration = 0;
             for(let item of newsItems) {
@@ -464,47 +770,39 @@
                             if(tempAudio.duration === Infinity || isNaN(tempAudio.duration)) {
                                 tempAudio.currentTime = 1e101;
                                 tempAudio.ontimeupdate = () => {
-                                    tempAudio.ontimeupdate = () => {};
-                                    tempAudio.currentTime = 0;
-                                    item.duration = tempAudio.duration;
-                                    totalDuration += tempAudio.duration;
-                                    r();
+                                    tempAudio.ontimeupdate = () => {}; tempAudio.currentTime = 0; item.duration = tempAudio.duration; totalDuration += tempAudio.duration; r();
                                 }
-                            } else {
-                                item.duration = tempAudio.duration; 
-                                totalDuration += tempAudio.duration; 
-                                r(); 
-                            }
+                            } else { item.duration = tempAudio.duration; totalDuration += tempAudio.duration; r(); }
                         };
                         tempAudio.onerror = () => { item.duration = 5; totalDuration += 5; r(); }; 
                     });
 
-                    const fullTextForAudio = item.headline + item.paragraphs.join("");
-                    const totalChars = fullTextForAudio.length;
+                    let fullTextForAudio = "";
+                    if (currentAppMode === 'ghost') {
+                        fullTextForAudio = item.paragraphs.join(""); 
+                    } else {
+                        fullTextForAudio = item.headline + "။ " + item.paragraphs.join("");
+                        item.subtitles = [];
+                    }
                     
-                    item.subtitles = [];
+                    const totalChars = fullTextForAudio.length;
+                    item.subtitles = []; 
                     let accumulatedTime = 0;
 
-                    const headlineTime = (item.headline.length / totalChars) * item.duration;
-                    item.subtitles.push({ text: "...", start: 0, end: headlineTime });
-                    accumulatedTime += headlineTime;
+                    if (currentAppMode === 'news') {
+                        const headlineTime = ((item.headline.length + 2) / totalChars) * item.duration;
+                        item.subtitles.push({ text: "...", start: 0, end: headlineTime });
+                        accumulatedTime += headlineTime;
+                    }
 
                     item.paragraphs.forEach(p => {
-                        const words = p.split(/(?<=[။၊\.\,])/); 
-                        let currentChunk = ""; let chunks = [];
+                        const words = p.split(/(?<=[။၊\.\,])/); let currentChunk = ""; let chunks = [];
                         words.forEach(w => {
-                            if(currentChunk.length + w.length > 150) { 
-                                if(currentChunk) chunks.push(currentChunk.trim()); 
-                                currentChunk = w; 
-                            } else {
-                                currentChunk += w;
-                            }
+                            if(currentChunk.length + w.length > 150) { if(currentChunk) chunks.push(currentChunk.trim()); currentChunk = w; } 
+                            else { currentChunk += w; }
                         });
                         if(currentChunk) chunks.push(currentChunk.trim());
-
-                        const pTimeTotal = (p.length / totalChars) * item.duration;
-                        const timePerChar = pTimeTotal / p.length;
-
+                        const pTimeTotal = (p.length / totalChars) * item.duration; const timePerChar = pTimeTotal / p.length;
                         chunks.forEach(c => {
                             const chunkTime = c.length * timePerChar;
                             item.subtitles.push({ text: c, start: accumulatedTime, end: accumulatedTime + chunkTime });
@@ -516,7 +814,6 @@
             document.getElementById('timeTotal').innerText = formatTime(totalDuration);
         }
 
-        // ==== PLAY & RECORD LOGIC ====
         function initAudioAnalyzer() {
             if(!audioContext) {
                 try {
@@ -525,116 +822,90 @@
                     const source = audioContext.createMediaElementSource(audioPlayer);
                     source.connect(analyzer); analyzer.connect(audioContext.destination);
                     dataArray = new Uint8Array(analyzer.frequencyBinCount);
-                } catch (e) {
-                    console.error("Audio Context Init Error:", e);
-                }
+                } catch (e) { console.error("Audio Context Init Error:", e); }
             }
         }
 
-        // Play/Pause
+        // AUTO-SKIP AND ERROR HANDLING FUNCTION FOR NEXT AUDIO
+        function playNextAudio() {
+            if (currentNewsIndex < newsItems.length) { 
+                audioPlayer.src = newsItems[currentNewsIndex].audioUrl; 
+                audioPlayer.play().then(() => { 
+                    isPlaying = true; 
+                }).catch(e => {
+                    console.error("Audio Playback Error, skipping to next:", e);
+                    currentNewsIndex++;
+                    playNextAudio(); // Skip to next item safely
+                });
+            } else { 
+                stopPlayback(); 
+                if(isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); 
+            }
+        }
+
         btnPlayOnly.addEventListener('click', async () => {
             if (!newsItems.length || isRecording) return;
-            
             try {
                 if (!audioContext) initAudioAnalyzer();
                 if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
             } catch(e) { }
 
             if (isPlaying) {
-                audioPlayer.pause();
-                isPlaying = false;
-                playIcon.classList.replace('fa-pause', 'fa-play');
-                playText.innerText = "Play Video";
-                cancelAnimationFrame(animationFrameId);
+                audioPlayer.pause(); isPlaying = false; playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play"; cancelAnimationFrame(animationFrameId);
             } else {
-                isRecording = false;
-                btnPlayAndRecord.disabled = true;
-                
+                isRecording = false; btnPlayAndRecord.disabled = true;
                 if (audioPlayer.currentTime === 0 && currentNewsIndex === 0 && (!audioPlayer.src || audioPlayer.src === window.location.href)) {
                     audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
                 }
-                
                 audioPlayer.play().then(() => {
-                    isPlaying = true;
-                    playIcon.classList.replace('fa-play', 'fa-pause');
-                    playText.innerText = "Pause";
+                    isPlaying = true; playIcon.classList.replace('fa-play', 'fa-pause'); playText.innerText = "Pause"; renderLoop();
+                }).catch(e => {
+                    console.error("First Playback Error:", e);
+                    currentNewsIndex++;
+                    playNextAudio();
                     renderLoop();
-                }).catch(e => console.error(e));
+                });
             }
         });
 
-        // Stop
         btnStop.addEventListener('click', () => {
             if (!newsItems.length) return;
             stopPlayback();
-            if(isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            playIcon.classList.replace('fa-pause', 'fa-play');
-            playText.innerText = "Play Video";
-            btnPlayOnly.disabled = false;
-            btnPlayAndRecord.disabled = false;
-            isRecording = false;
-            document.getElementById('recordingStatus').classList.add('hidden');
+            if(isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play";
+            btnPlayOnly.disabled = false; btnPlayAndRecord.disabled = false; isRecording = false; document.getElementById('recordingStatus').classList.add('hidden');
         });
 
-        // Seek (Scrub)
         let isDragging = false;
-        progressTrack.addEventListener('mousedown', (e) => { isDragging = true; seekAudio(e); });
-        window.addEventListener('mouseup', () => isDragging = false);
-        progressTrack.addEventListener('mousemove', (e) => { if (isDragging) seekAudio(e); });
-        progressTrack.addEventListener('touchstart', (e) => { isDragging = true; seekAudio(e.touches[0]); });
-        window.addEventListener('touchend', () => isDragging = false);
-        progressTrack.addEventListener('touchmove', (e) => { if (isDragging) seekAudio(e.touches[0]); });
+        progressTrack.addEventListener('mousedown', (e) => { isDragging = true; seekAudio(e); }); window.addEventListener('mouseup', () => isDragging = false);
+        progressTrack.addEventListener('mousemove', (e) => { if (isDragging) seekAudio(e); }); progressTrack.addEventListener('touchstart', (e) => { isDragging = true; seekAudio(e.touches[0]); });
+        window.addEventListener('touchend', () => isDragging = false); progressTrack.addEventListener('touchmove', (e) => { if (isDragging) seekAudio(e.touches[0]); });
 
         function seekAudio(e) {
             if (!newsItems.length || totalDuration === 0 || isRecording) return; 
             const rect = progressTrack.getBoundingClientRect();
-            let clickX = e.clientX - rect.left;
-            if (clickX < 0) clickX = 0;
-            if (clickX > rect.width) clickX = rect.width;
-            
+            let clickX = e.clientX - rect.left; if (clickX < 0) clickX = 0; if (clickX > rect.width) clickX = rect.width;
             const targetTime = (clickX / rect.width) * totalDuration;
             
-            let accumulated = 0;
-            let targetIndex = 0;
-            let localTime = 0;
-
+            let accumulated = 0; let targetIndex = 0; let localTime = 0;
             for (let i = 0; i < newsItems.length; i++) {
-                if (targetTime <= accumulated + newsItems[i].duration) {
-                    targetIndex = i;
-                    localTime = targetTime - accumulated;
-                    break;
-                }
+                if (targetTime <= accumulated + newsItems[i].duration) { targetIndex = i; localTime = targetTime - accumulated; break; }
                 accumulated += newsItems[i].duration;
             }
 
             const wasPlaying = isPlaying;
-            if (targetIndex !== currentNewsIndex) {
-                currentNewsIndex = targetIndex;
-                audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
-            }
-            
-            if (audioPlayer.readyState >= 1) {
-                audioPlayer.currentTime = localTime;
-            } else {
-                const onLoaded = function() {
-                    audioPlayer.currentTime = localTime;
-                    audioPlayer.removeEventListener('loadedmetadata', onLoaded);
-                };
+            if (targetIndex !== currentNewsIndex) { currentNewsIndex = targetIndex; audioPlayer.src = newsItems[currentNewsIndex].audioUrl; }
+            if (audioPlayer.readyState >= 1) { audioPlayer.currentTime = localTime; } else {
+                const onLoaded = function() { audioPlayer.currentTime = localTime; audioPlayer.removeEventListener('loadedmetadata', onLoaded); };
                 audioPlayer.addEventListener('loadedmetadata', onLoaded);
             }
-            
-            if (wasPlaying && audioPlayer.paused) {
-                audioPlayer.play().catch(e => console.log(e));
-            }
+            if (wasPlaying && audioPlayer.paused) { audioPlayer.play().catch(e => console.log(e)); }
             
             drawCanvasFrame(performance.now() / 1000, localTime, 0);
             document.getElementById('timeCurrent').innerText = formatTime(targetTime);
             document.getElementById('playbackProgress').style.width = `${(targetTime / totalDuration) * 100}%`;
         }
 
-        // Record to MP4 FORMAT
         btnPlayAndRecord.addEventListener('click', async () => {
             if (!newsItems.length || isRecording) return;
             try {
@@ -642,241 +913,190 @@
                 if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
             } catch(e){}
 
-            const resHeight = parseInt(resolutionSelect.value);
-            const resWidth = Math.floor(resHeight * (9/16)); 
-            document.getElementById('videoCanvas').width = resWidth; 
-            document.getElementById('videoCanvas').height = resHeight;
+            const resHeight = parseInt(resolutionSelect.value); const resWidth = Math.floor(resHeight * (9/16)); 
+            document.getElementById('videoCanvas').width = resWidth; document.getElementById('videoCanvas').height = resHeight;
 
-            isRecording = true; recordedChunks = [];
-            btnPlayOnly.disabled = true;
-            btnPlayAndRecord.disabled = true; 
-            document.getElementById('recordingStatus').classList.remove('hidden');
-            document.getElementById('recordingText').innerText = '● Recording Broadcast';
+            isRecording = true; recordedChunks = []; btnPlayOnly.disabled = true; btnPlayAndRecord.disabled = true; 
+            document.getElementById('recordingStatus').classList.remove('hidden'); document.getElementById('recordingText').innerText = '● Recording Broadcast';
             
             try {
-                let combinedStream;
-                const canvasStream = document.getElementById('videoCanvas').captureStream(30);
-                
+                let combinedStream; const canvasStream = document.getElementById('videoCanvas').captureStream(30);
                 if (audioContext && analyzer) {
-                    const dest = audioContext.createMediaStreamDestination(); 
-                    analyzer.connect(dest); 
+                    const dest = audioContext.createMediaStreamDestination(); analyzer.connect(dest); 
                     combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-                } else {
-                    combinedStream = canvasStream; 
-                }
+                } else { combinedStream = canvasStream; }
                 
-                // Set mimeType to MP4 
                 let options = { mimeType: 'video/webm; codecs=vp8,opus' };
-                if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.424028, mp4a.40.2"')) {
-                    options = { mimeType: 'video/mp4; codecs="avc1.424028, mp4a.40.2"' };
-                } else if (MediaRecorder.isTypeSupported('video/mp4')) {
-                    options = { mimeType: 'video/mp4' };
-                }
+                if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.424028, mp4a.40.2"')) { options = { mimeType: 'video/mp4; codecs="avc1.424028, mp4a.40.2"' }; } 
+                else if (MediaRecorder.isTypeSupported('video/mp4')) { options = { mimeType: 'video/mp4' }; }
 
                 mediaRecorder = new MediaRecorder(combinedStream, options);
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                
                 mediaRecorder.onstop = () => {
-                    const format = options.mimeType.includes('mp4') ? 'mp4' : 'mp4'; // Always name mp4
+                    const format = options.mimeType.includes('mp4') ? 'mp4' : 'mp4'; 
                     const blob = new Blob(recordedChunks, { type: options.mimeType });
-                    const url = URL.createObjectURL(blob); 
-                    const a = document.createElement('a'); document.body.appendChild(a);
-                    a.style = 'display: none'; a.href = url;
-                    a.download = `D_News_${languageSelect.value}_Broadcast_${new Date().getTime()}.${format}`;
-                    a.click(); window.URL.revokeObjectURL(url);
+                    const url = URL.createObjectURL(blob); const a = document.createElement('a'); document.body.appendChild(a); a.style = 'display: none'; a.href = url;
                     
-                    document.getElementById('recordingStatus').classList.add('hidden');
-                    btnPlayAndRecord.disabled = false;
-                    btnPlayOnly.disabled = false;
-                    playIcon.classList.replace('fa-pause', 'fa-play');
-                    playText.innerText = "Play Video";
-                    isRecording = false; 
-                    document.getElementById('videoCanvas').width = 720; document.getElementById('videoCanvas').height = 1280; 
-                    drawCanvasFrame(0);
+                    const fileNamePre = currentAppMode === 'ghost' ? 'D_Ghost' : 'D_News';
+                    a.download = `${fileNamePre}_${languageSelect.value}_${new Date().getTime()}.${format}`; a.click(); window.URL.revokeObjectURL(url);
+                    
+                    document.getElementById('recordingStatus').classList.add('hidden'); btnPlayAndRecord.disabled = false; btnPlayOnly.disabled = false;
+                    playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play"; isRecording = false; 
+                    document.getElementById('videoCanvas').width = 720; document.getElementById('videoCanvas').height = 1280; drawCanvasFrame(0);
                 };
 
-                mediaRecorder.start(); 
-                currentNewsIndex = 0;
-                audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
-                audioPlayer.play().then(() => {
-                    isPlaying = true; renderLoop();
-                });
-
+                mediaRecorder.start(); currentNewsIndex = 0; 
+                isPlaying = true;
+                renderLoop();
+                playNextAudio(); // Use robust play handler
             } catch (err) { 
-                showErrorLog("Recording Error: Your browser may not support canvas capturing or this video codec format.");
-                document.getElementById('recordingStatus').classList.add('hidden'); 
-                isRecording = false; 
-                btnPlayAndRecord.disabled = false; 
-                btnPlayOnly.disabled = false;
+                showErrorLog("Recording Error: Your browser may not support canvas capturing.");
+                document.getElementById('recordingStatus').classList.add('hidden'); isRecording = false; btnPlayAndRecord.disabled = false; btnPlayOnly.disabled = false;
             }
         });
 
+        // Event Listeners for robust playback
         audioPlayer.onended = () => {
             currentNewsIndex++; 
-            if (currentNewsIndex < newsItems.length) {
-                audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
-                audioPlayer.play().then(() => { isPlaying = true; });
-            } else {
-                stopPlayback(); 
-                if(isRecording && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-            }
+            playNextAudio();
+        };
+
+        audioPlayer.onerror = () => {
+            console.error("Audio playback error encountered.");
+            currentNewsIndex++;
+            playNextAudio();
         };
 
         function stopPlayback() {
-            audioPlayer.pause(); isPlaying = false; audioPlayer.currentTime = 0;
-            cancelAnimationFrame(animationFrameId);
-            document.getElementById('playbackProgress').style.width = '0%';
-            document.getElementById('timeCurrent').innerText = "00:00";
-            
-            if(!isRecording) {
-                playIcon.classList.replace('fa-pause', 'fa-play');
-                playText.innerText = "Play Video";
-                btnPlayOnly.disabled = false;
-                btnPlayAndRecord.disabled = false;
-            }
+            audioPlayer.pause(); isPlaying = false; audioPlayer.currentTime = 0; cancelAnimationFrame(animationFrameId);
+            document.getElementById('playbackProgress').style.width = '0%'; document.getElementById('timeCurrent').innerText = "00:00";
+            if(!isRecording) { playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play"; btnPlayOnly.disabled = false; btnPlayAndRecord.disabled = false; }
             if (newsItems.length > 0) drawCanvasFrame(0);
         }
 
         function renderLoop() {
-            if (!isPlaying) return;
-            let volume = 0;
+            if (!isPlaying) return; let volume = 0;
             if (analyzer && dataArray) {
-                analyzer.getByteFrequencyData(dataArray);
-                let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-                volume = sum / dataArray.length; 
+                analyzer.getByteFrequencyData(dataArray); let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i]; volume = sum / dataArray.length; 
             }
             drawCanvasFrame(performance.now() / 1000, audioPlayer.currentTime, volume);
-            
-            let overallTime = 0;
-            for(let i=0; i<currentNewsIndex; i++) overallTime += (newsItems[i].duration || 0);
-            overallTime += audioPlayer.currentTime;
-            
-            document.getElementById('timeCurrent').innerText = formatTime(overallTime);
-            document.getElementById('playbackProgress').style.width = `${(overallTime / totalDuration) * 100}%`;
-            
+            let overallTime = 0; for(let i=0; i<currentNewsIndex; i++) overallTime += (newsItems[i].duration || 0); overallTime += audioPlayer.currentTime;
+            document.getElementById('timeCurrent').innerText = formatTime(overallTime); document.getElementById('playbackProgress').style.width = `${(overallTime / totalDuration) * 100}%`;
             animationFrameId = requestAnimationFrame(renderLoop);
         }
 
-        // ==== CANVAS RENDER (CNN/BBC STYLE LOGO) ====
         function drawCanvasFrame(timeInSeconds, currentAudioTime = 0, volume = 0) {
-            const width = document.getElementById('videoCanvas').width;
-            const height = document.getElementById('videoCanvas').height;
-            const item = newsItems[currentNewsIndex];
-
+            const width = document.getElementById('videoCanvas').width; const height = document.getElementById('videoCanvas').height; const item = newsItems[currentNewsIndex];
             canvasContext.clearRect(0, 0, width, height);
             
+            // BACKGROUND RENDERING
             if (anchorImageObj) {
-                const scale = Math.max(width / anchorImageObj.width, height / anchorImageObj.height);
-                const finalScale = scale * (1 + (Math.sin(timeInSeconds * 0.3) * 0.015)); 
-                const volumeYShift = (volume / 255) * 4; 
+                const scale = Math.max(width / anchorImageObj.width, height / anchorImageObj.height); 
+                const finalScale = scale * (1 + (Math.sin(timeInSeconds * 0.1) * 0.015)); 
+                const volumeYShift = currentAppMode === 'ghost' ? (volume / 255) * 2 : (volume / 255) * 4; 
                 
-                const scaledWidth = anchorImageObj.width * finalScale;
-                const scaledHeight = anchorImageObj.height * finalScale;
-                const offsetX = (width - scaledWidth) / 2;
-                const offsetY = (height - scaledHeight) / 2 + volumeYShift;
-                
+                const scaledWidth = anchorImageObj.width * finalScale; const scaledHeight = anchorImageObj.height * finalScale;
+                const offsetX = (width - scaledWidth) / 2; const offsetY = (height - scaledHeight) / 2 + volumeYShift;
                 canvasContext.drawImage(anchorImageObj, offsetX, offsetY, scaledWidth, scaledHeight);
+                
+                if(currentAppMode === 'ghost') {
+                    canvasContext.fillStyle = 'rgba(0,0,0,0.2)'; canvasContext.fillRect(0,0,width,height);
+                }
             } else {
                 const bgGradient = canvasContext.createRadialGradient(width/2, height/2, width*0.1, width/2, height/2, height);
-                bgGradient.addColorStop(0, '#7f1d1d'); 
-                bgGradient.addColorStop(1, '#020617'); 
-                canvasContext.fillStyle = bgGradient; canvasContext.fillRect(0,0,width,height);
+                bgGradient.addColorStop(0, currentAppMode === 'ghost' ? '#450a0a' : '#7f1d1d'); 
+                bgGradient.addColorStop(1, '#020617'); canvasContext.fillStyle = bgGradient; canvasContext.fillRect(0,0,width,height);
                 
-                canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.1)'; canvasContext.lineWidth = 1.5;
-                const offset = (timeInSeconds * 15) % 50;
+                canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.05)'; canvasContext.lineWidth = 1.5;
+                const offset = (timeInSeconds * (currentAppMode === 'ghost' ? 10 : 15)) % 50;
                 for(let i=-50; i<width; i+=50) { canvasContext.beginPath(); canvasContext.moveTo(i + offset,0); canvasContext.lineTo(i + offset,height); canvasContext.stroke(); }
                 for(let i=0; i<height; i+=50) { canvasContext.beginPath(); canvasContext.moveTo(0,i); canvasContext.lineTo(width,i); canvasContext.stroke(); }
             }
 
-            const logoX = width * 0.05;
-            const logoY = height * 0.04;
-            const logoBoxH = height * 0.045; 
-            const logoBoxW = logoBoxH * 1.2;
-
+            // LOGO BOX
+            const logoX = width * 0.05; const logoY = height * 0.04; const logoBoxH = height * 0.045; const logoBoxW = logoBoxH * 1.2;
             canvasContext.shadowColor = 'rgba(0,0,0,0.5)'; canvasContext.shadowBlur = 8;
-            
-            canvasContext.fillStyle = '#cc0000'; 
-            canvasContext.fillRect(logoX, logoY, logoBoxW, logoBoxH);
-            
-            canvasContext.fillStyle = 'white'; 
-            canvasContext.font = `900 ${logoBoxH * 0.8}px Montserrat, sans-serif`; 
-            canvasContext.textAlign = 'center'; 
-            canvasContext.textBaseline = 'middle'; 
+            canvasContext.fillStyle = '#cc0000'; canvasContext.fillRect(logoX, logoY, logoBoxW, logoBoxH);
+            canvasContext.fillStyle = 'white'; canvasContext.font = `900 ${logoBoxH * 0.8}px Montserrat, sans-serif`; canvasContext.textAlign = 'center'; canvasContext.textBaseline = 'middle'; 
             canvasContext.fillText("D", logoX + (logoBoxW/2), logoY + (logoBoxH/2) + 2);
             
             canvasContext.textAlign = 'left'; 
-            canvasContext.font = `900 ${logoBoxH * 0.8}px Montserrat, sans-serif`; 
-            canvasContext.fillText("NEWS", logoX + logoBoxW + 6, logoY + (logoBoxH/2) + 2);
+            const logoText = currentAppMode === 'ghost' ? "GHOST STORIES" : "NEWS";
+            canvasContext.font = `900 ${currentAppMode === 'ghost' ? logoBoxH * 0.65 : logoBoxH * 0.8}px Montserrat, sans-serif`; 
+            canvasContext.fillText(logoText, logoX + logoBoxW + 6, logoY + (logoBoxH/2) + 2); 
             canvasContext.shadowBlur = 0;
-            
-            canvasContext.fillStyle = '#ef4444'; canvasContext.font = `bold ${height * 0.02}px sans-serif`; canvasContext.textAlign = 'right';
-            if (Math.floor(timeInSeconds * 2) % 2 === 0) canvasContext.fillText("● LIVE", width * 0.95, height * 0.06);
 
+            // TEXT BACKGROUND GRADIENT
             const textBgHeight = height * 0.45, textBgY = height - textBgHeight;
             const textBgGradient = canvasContext.createLinearGradient(0, textBgY, 0, height);
             textBgGradient.addColorStop(0, 'rgba(0, 0, 0, 0)'); textBgGradient.addColorStop(0.2, 'rgba(0, 0, 0, 0.9)'); textBgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
             canvasContext.fillStyle = textBgGradient; canvasContext.fillRect(0, textBgY, width, textBgHeight);
 
+            // AUDIO VISUALIZER
             if (dataArray && isPlaying) {
-                const barWidth = width / 30; canvasContext.fillStyle = 'rgba(239, 68, 68, 0.4)'; 
+                const barWidth = width / 30; canvasContext.fillStyle = currentAppMode === 'ghost' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)'; 
                 for(let i=0; i<30; i++) {
-                    const barHeight = (dataArray[i*2] || 0) * 0.6; 
-                    canvasContext.fillRect(i * barWidth, textBgY + (height*0.1) - barHeight, barWidth - 2, barHeight);
+                    const barHeight = (dataArray[i*2] || 0) * 0.6; canvasContext.fillRect(i * barWidth, textBgY + (height*0.1) - barHeight, barWidth - 2, barHeight);
                 }
             }
 
+            // CONTENT TEXT
             if (item) {
                 let subText = "";
-                if (item.subtitles) {
-                    for (let sub of item.subtitles) {
-                        if (currentAudioTime >= sub.start && currentAudioTime <= sub.end) { subText = sub.text; break; }
-                    }
-                }
+                if (item.subtitles) { for (let sub of item.subtitles) { if (currentAudioTime >= sub.start && currentAudioTime <= sub.end) { subText = sub.text; break; } } }
                 const contentX = width * 0.06, maxWidth = width * 0.88;
                 
-                canvasContext.textAlign = 'left'; canvasContext.fillStyle = '#cc0000'; 
-                const catStr = item.category ? item.category.toUpperCase() : "BREAKING";
-                canvasContext.font = `bold ${height * 0.018}px sans-serif`;
-                const catW = canvasContext.measureText(catStr).width + 24, catH = height * 0.035, catY = textBgY + (height * 0.1);
-                canvasContext.fillRect(contentX, catY, catW, catH);
-                canvasContext.fillStyle = 'white'; canvasContext.textBaseline = 'middle';
-                canvasContext.fillText(catStr, contentX + 12, catY + (catH/2) + 2);
-
-                canvasContext.fillStyle = '#ffffff';
+                canvasContext.textAlign = 'left'; 
                 const isBurmese = languageSelect.value === 'Burmese';
-                const hlFontSize = isBurmese ? height * 0.032 : height * 0.028;
-                canvasContext.font = `bold ${hlFontSize}px Padauk, sans-serif`; canvasContext.textBaseline = 'top';
-                const subY = wrapTextWordBoundary(canvasContext, item.headline, contentX, catY + catH + 15, maxWidth, hlFontSize * 1.4);
+                const hlFontSize = isBurmese ? height * 0.032 : height * 0.028; 
+                canvasContext.textBaseline = 'top';
+                let subY = textBgY + (height * 0.15);
+
+                if (currentAppMode === 'ghost') {
+                    // Draw Main Story Headline for Ghost
+                    canvasContext.fillStyle = '#cc0000'; 
+                    const catStr = item.category ? item.category.toUpperCase() : "HORROR";
+                    canvasContext.font = `bold ${height * 0.018}px sans-serif`;
+                    const catW = canvasContext.measureText(catStr).width + 24, catH = height * 0.035, catY = textBgY + (height * 0.1);
+                    canvasContext.fillRect(contentX, catY, catW, catH);
+                    canvasContext.fillStyle = 'white'; canvasContext.textBaseline = 'middle';
+                    canvasContext.fillText(catStr, contentX + 12, catY + (catH/2) + 2);
+
+                    canvasContext.textBaseline = 'top';
+                    canvasContext.fillStyle = '#ffffff';
+                    canvasContext.font = `bold ${hlFontSize}px Padauk, sans-serif`; 
+                    subY = wrapTextWordBoundary(canvasContext, mainStoryHeadline, contentX, catY + catH + 15, maxWidth, hlFontSize * 1.4);
+                } else {
+                    // Draw Category and specific News Headline
+                    canvasContext.fillStyle = '#cc0000'; 
+                    const catStr = item.category ? item.category.toUpperCase() : "BREAKING";
+                    canvasContext.font = `bold ${height * 0.018}px sans-serif`;
+                    const catW = canvasContext.measureText(catStr).width + 24, catH = height * 0.035, catY = textBgY + (height * 0.1);
+                    canvasContext.fillRect(contentX, catY, catW, catH);
+                    canvasContext.fillStyle = 'white'; canvasContext.textBaseline = 'middle';
+                    canvasContext.fillText(catStr, contentX + 12, catY + (catH/2) + 2);
+
+                    canvasContext.textBaseline = 'top';
+                    canvasContext.fillStyle = '#ffffff';
+                    canvasContext.font = `bold ${hlFontSize}px Padauk, sans-serif`; 
+                    subY = wrapTextWordBoundary(canvasContext, item.headline, contentX, catY + catH + 15, maxWidth, hlFontSize * 1.4);
+                }
                 
-                canvasContext.fillStyle = '#e2e8f0'; 
-                const subFontSize = isBurmese ? height * 0.026 : height * 0.022;
-                canvasContext.font = `bold ${subFontSize}px Padauk, sans-serif`;
+                // Draw Subtitles
+                canvasContext.fillStyle = '#e2e8f0'; const subFontSize = isBurmese ? height * 0.026 : height * 0.022; canvasContext.font = `bold ${subFontSize}px Padauk, sans-serif`;
                 wrapTextWordBoundary(canvasContext, subText, contentX, subY + 20, maxWidth, subFontSize * 1.5);
             }
         }
 
         function wrapTextWordBoundary(ctx, text, x, y, maxWidth, lineHeight) {
-            if(!text) return y;
-            let segments = [];
-            
-            if (window.Intl && Intl.Segmenter) {
-                const segmenter = new Intl.Segmenter('my', { granularity: 'word' });
-                segments = Array.from(segmenter.segment(text)).map(s => s.segment);
-            } else {
-                segments = text.split(/(?=[ \n])|(?<=[ \n])/);
-            }
+            if(!text) return y; let segments = [];
+            if (window.Intl && Intl.Segmenter) { const segmenter = new Intl.Segmenter('my', { granularity: 'word' }); segments = Array.from(segmenter.segment(text)).map(s => s.segment); } 
+            else { segments = text.split(/(?=[ \n])|(?<=[ \n])/); }
             
             let line = '', currentY = y;
             for (let n = 0; n < segments.length; n++) {
-                let testLine = line + segments[n]; 
-                let metrics = ctx.measureText(testLine);
-                if (metrics.width > maxWidth && n > 0 && line.trim() !== '') { 
-                    ctx.fillText(line.trim(), x, currentY); 
-                    line = segments[n]; 
-                    currentY += lineHeight; 
-                } else {
-                    line = testLine;
-                }
+                let testLine = line + segments[n]; let metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && n > 0 && line.trim() !== '') { ctx.fillText(line.trim(), x, currentY); line = segments[n]; currentY += lineHeight; } else { line = testLine; }
             }
             if (line.trim() !== '') ctx.fillText(line.trim(), x, currentY); 
             return currentY + lineHeight;
@@ -884,8 +1104,7 @@
 
         function formatTime(seconds) {
             if (isNaN(seconds) || seconds === Infinity || seconds < 0) return "00:00";
-            const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60);
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60); return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
     </script>
 </body>
