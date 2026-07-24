@@ -1,1111 +1,979 @@
 <!DOCTYPE html>
-<html lang="my">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D Studio - Premium AI Creator</title>
+    <title>D2 Bike - Premium Motorcycle Rental</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- AOS Animation CSS -->
+    <link href="https://unpkg.com/2@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        luxe: {
+                            bg: '#FBF9F1',
+                            card: '#FFFFFF',
+                            gold: '#C5A059',
+                            goldhover: '#B38D45',
+                            dark: '#0A0A0A',
+                            red: '#991B1B',
+                            gray: '#4B5563'
+                        },
+                        admin: {
+                            bg: '#1e1e2f',
+                            card: '#2a2a40',
+                            accent: '#C5A059'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Padauk:wght@400;700&display=swap');
-        
         body { 
-            font-family: 'Padauk', sans-serif; 
-            background-color: #020617;
-            color: #e2e8f0; 
-            overflow: hidden; 
+            overflow-x: hidden; 
+            background-color: #FBF9F1;
         }
         
-        .glass-card { 
-            background: #0f172a; 
-            border: 1px solid rgba(255, 255, 255, 0.05); 
-            border-radius: 24px; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        /* Premium Hero Background with Dark Gradient Overlay for contrast */
+        .hero-bg {
+            background-image: linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 0.5)), url('https://images.unsplash.com/photo-1558981285-6f0c94958bb6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
         }
 
-        .logo-font { font-family: 'Montserrat', sans-serif; }
-        .app-logo-box { background-color: #dc2626; color: white; padding: 0.2rem 0.6rem; border-radius: 8px; line-height: 1; }
-        
-        .video-container { width: 100%; max-width: 420px; margin: 0 auto; position: relative; }
-        canvas { width: 100%; height: auto; aspect-ratio: 9/16; background-color: #000; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); display: block; border: 1px solid #1e293b; }
-        
-        .loader { border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #ef4444; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
-        .loader-small { width: 14px; height: 14px; border-width: 2px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #progressTrack { cursor: pointer; }
+        .text-gradient-gold {
+            background: linear-gradient(to right, #C5A059, #E6C972, #C5A059);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        /* Tooltip style */
+        .social-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
 
-        .tab-active { background-color: rgba(220, 38, 38, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: bold; }
-        .tab-inactive { color: #94a3b8; background-color: transparent; border: 1px solid transparent; font-weight: 600; }
-        .tab-inactive:hover { background-color: rgba(30, 41, 59, 0.5); color: #e2e8f0; }
+        /* FAB Variables */
+        .fab-item {
+            position: absolute;
+            bottom: 50px; 
+            left: 50%;
+            margin-left: -24px; 
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            opacity: 0;
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        .fab-container.is-open .fab-item { pointer-events: auto; }
+
+        /* Start Positions */
+        .fab-item-1 { transform: translate(0, -300px) scale(0); }
+        .fab-item-2 { transform: translate(120px, -180px) scale(0); }
+        .fab-item-3 { transform: translate(-120px, -120px) scale(0); }
+        .fab-item-4 { transform: translate(120px, -60px) scale(0); }
+        .fab-item-5 { transform: translate(0, 20px) scale(0); }
+
+        /* Final Positions */
+        .fab-container.is-open .fab-item-1 { transform: translate(0, -290px) scale(1); opacity: 1; transition-delay: 0.20s; }
+        .fab-container.is-open .fab-item-2 { transform: translate(0, -230px) scale(1); opacity: 1; transition-delay: 0.15s; }
+        .fab-container.is-open .fab-item-3 { transform: translate(0, -170px) scale(1); opacity: 1; transition-delay: 0.10s; }
+        .fab-container.is-open .fab-item-4 { transform: translate(0, -110px) scale(1); opacity: 1; transition-delay: 0.05s; }
+        .fab-container.is-open .fab-item-5 { transform: translate(0, -50px) scale(1); opacity: 1; transition-delay: 0.0s; }
+
+        /* FAB Main Toggle */
+        #fab-icon-close { position: absolute; right: 24px; opacity: 0; transform: rotate(-90deg) scale(0); transition: all 0.4s ease; }
+        #fab-icon-open { transition: all 0.4s ease; opacity: 1; transform: rotate(0) scale(1); }
+        .fab-container.is-open #fab-icon-open { opacity: 0; transform: rotate(90deg) scale(0); }
+        .fab-container.is-open #fab-icon-close { opacity: 1; transform: rotate(0) scale(1); }
+        .fab-container.is-open #fab-main { background-color: #C5A059; color: #0A0A0A; border-color: #C5A059; }
+
+        /* Image Carousel Controls */
+        .carousel-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,0.5); color: white; border: none;
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s; z-index: 10;
+        }
+        .group:hover .carousel-btn { opacity: 1; }
+        .carousel-btn:hover { background: rgba(197, 160, 89, 0.9); }
+        .carousel-btn.prev { left: 10px; }
+        .carousel-btn.next { right: 10px; }
+        
+        /* Admin Panel Scrollbar */
+        .admin-scroll::-webkit-scrollbar { width: 8px; }
+        .admin-scroll::-webkit-scrollbar-track { background: #1e1e2f; }
+        .admin-scroll::-webkit-scrollbar-thumb { background: #4B5563; border-radius: 4px; }
+        .admin-scroll::-webkit-scrollbar-thumb:hover { background: #C5A059; }
+
+        /* Custom File Input Styling */
+        .file-upload-btn {
+            display: inline-block;
+            cursor: pointer;
+            padding: 8px 16px;
+            background-color: #2a2a40;
+            color: #C5A059;
+            border: 1px solid #C5A059;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .file-upload-btn:hover {
+            background-color: #C5A059;
+            color: #0A0A0A;
+        }
+        input[type="file"].hidden-input {
+            display: none;
+        }
     </style>
 </head>
-<body class="h-screen w-full flex items-center justify-center relative">
+<body class="font-sans text-luxe-dark antialiased selection:bg-luxe-gold selection:text-white">
 
-    <!-- ================= LOGIN SCREEN ================= -->
-    <div id="loginScreen" class="w-full max-w-md glass-card p-10 flex flex-col gap-6 transform transition-all duration-500 z-50">
-        <div class="flex flex-col items-center justify-center mb-2">
-            <div class="flex items-center gap-2 mb-3">
-                <div class="app-logo-box font-black text-4xl logo-font tracking-tighter">D</div>
-                <div class="text-white font-black text-4xl logo-font tracking-tighter">STUDIO</div>
-            </div>
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest text-center mt-1">Premium Creator App</p>
-        </div>
-
-        <div id="loginError" class="hidden bg-red-950/50 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center"></div>
-
-        <div class="flex flex-col gap-5">
-            <div>
-                <label class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block ml-1">Username</label>
-                <div class="flex items-center bg-[#1e293b] p-3.5 rounded-xl border border-slate-700 focus-within:border-red-500 transition-colors">
-                    <i class="fa-solid fa-user text-slate-500 w-6 ml-1"></i>
-                    <input type="text" id="usernameInput" placeholder="Enter your username" class="bg-transparent w-full text-white focus:outline-none ml-2 text-sm">
+    <!-- PUBLIC WEBSITE WRAPPER -->
+    <div id="public-wrapper">
+        <!-- Navigation -->
+        <nav class="bg-luxe-bg/90 backdrop-blur-md shadow-sm fixed w-full z-40 top-0 transition-all duration-300 border-b border-luxe-gold/20" id="navbar">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    <div class="flex-shrink-0 flex items-center" data-aos="fade-right" data-aos-duration="1000">
+                        <a href="#" class="block hover:scale-105 transition-transform duration-300">
+                            <div class="flex flex-col items-end bg-[#FCEE21] px-3 py-1 rounded shadow-md border border-yellow-400/50">
+                                <span class="text-[10px] md:text-[11px] font-bold text-black leading-none mb-0.5 tracking-wide font-sans">ดีทู-ไบค์</span>
+                                <div class="flex items-baseline font-black italic text-black font-sans leading-none tracking-tighter">
+                                    <span class="text-2xl md:text-3xl">D</span>
+                                    <span class="text-lg md:text-xl transform -translate-y-2.5 -ml-0.5">2</span>
+                                    <span class="text-2xl md:text-3xl ml-0.5">-Bike</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-10" data-aos="fade-down" data-aos-duration="1000">
+                        <a href="#home" class="text-sm uppercase tracking-widest font-semibold text-luxe-dark hover:text-luxe-gold transition">Home</a>
+                        <a href="#fleet" class="text-sm uppercase tracking-widest font-semibold text-luxe-dark hover:text-luxe-gold transition">Our Fleet</a>
+                        <a href="#services" class="text-sm uppercase tracking-widest font-semibold text-luxe-dark hover:text-luxe-gold transition">Services</a>
+                        <a href="#locations" class="text-sm uppercase tracking-widest font-semibold text-luxe-dark hover:text-luxe-gold transition">Locations</a>
+                    </div>
+                    <div class="md:hidden flex items-center">
+                        <button id="mobile-menu-btn" class="text-luxe-dark hover:text-luxe-gold focus:outline-none transition"><i class="fa-solid fa-bars text-2xl"></i></button>
+                    </div>
                 </div>
             </div>
-            
-            <div>
-                <label class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block ml-1">Password</label>
-                <div class="flex items-center bg-[#1e293b] p-3.5 rounded-xl border border-slate-700 focus-within:border-red-500 transition-colors">
-                    <i class="fa-solid fa-lock text-slate-500 w-6 ml-1"></i>
-                    <input type="password" id="passwordInput" placeholder="Enter your password" class="bg-transparent w-full text-white focus:outline-none ml-2 text-sm">
+            <div id="mobile-menu" class="hidden md:hidden bg-luxe-bg border-t border-luxe-gold/20 shadow-lg absolute w-full z-30">
+                <div class="px-4 pt-2 pb-4 space-y-2">
+                    <a href="#home" class="block px-3 py-3 text-base uppercase tracking-wider font-semibold text-luxe-dark hover:text-luxe-gold hover:bg-luxe-gold/10 rounded-lg transition">Home</a>
+                    <a href="#fleet" class="block px-3 py-3 text-base uppercase tracking-wider font-semibold text-luxe-dark hover:text-luxe-gold hover:bg-luxe-gold/10 rounded-lg transition">Our Fleet</a>
+                    <a href="#services" class="block px-3 py-3 text-base uppercase tracking-wider font-semibold text-luxe-dark hover:text-luxe-gold hover:bg-luxe-gold/10 rounded-lg transition">Services</a>
+                    <a href="#locations" class="block px-3 py-3 text-base uppercase tracking-wider font-semibold text-luxe-dark hover:text-luxe-gold hover:bg-luxe-gold/10 rounded-lg transition">Locations</a>
                 </div>
             </div>
+        </nav>
 
-            <button id="btnLogin" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-4 rounded-xl mt-4 uppercase tracking-wider text-sm transition-all shadow-[0_4px_14px_rgba(220,38,38,0.4)]">
-                Login to Studio
+        <!-- Hero Section -->
+        <section id="home" class="hero-bg h-[85vh] flex items-center justify-center pt-20 relative overflow-hidden">
+            <div class="text-center px-4 max-w-4xl mx-auto z-10">
+                <h1 data-aos="zoom-out" data-aos-delay="300" class="text-5xl md:text-7xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-2xl">
+                    Start Your Journey With <br/><span class="text-gradient-gold">The Best Bikes</span>
+                </h1>
+                <p data-aos="fade-up" data-aos-delay="500" class="text-lg md:text-xl text-gray-200 font-light mb-10 max-w-2xl mx-auto drop-shadow-md">
+                    Experience the ultimate ride. Reliable, affordable, and high-quality motorcycles ready for your adventure.
+                </p>
+                <div data-aos="fade-up" data-aos-delay="700" class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                    <a href="#fleet" class="group relative px-8 py-4 bg-luxe-gold text-white font-semibold text-lg uppercase tracking-wider overflow-hidden rounded-sm transition-all hover:bg-luxe-goldhover hover:shadow-[0_0_20px_rgba(197,160,89,0.5)]">
+                        <span class="relative z-10 flex items-center gap-2"><i class="fa-solid fa-key"></i> View Fleet & Rates</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fleet Section (Dynamically Rendered) -->
+        <section id="fleet" class="py-24 bg-luxe-bg relative">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-luxe-gold opacity-5 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-luxe-gold opacity-5 rounded-full blur-3xl"></div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="text-center mb-20" data-aos="fade-up">
+                    <span class="text-luxe-red font-bold tracking-[0.2em] uppercase text-sm mb-2 block">Exclusive Models</span>
+                    <h2 class="text-4xl md:text-5xl font-serif font-bold text-luxe-dark mt-2 mb-6">Rental Rates & Models</h2>
+                    <div class="w-20 h-1 bg-luxe-gold mx-auto"></div>
+                </div>
+                <!-- Bikes Grid -->
+                <div id="fleet-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+                    <!-- Javascript will inject bikes here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Services -->
+        <section id="services" class="py-24 bg-luxe-dark relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, #C5A059 0, #C5A059 1px, transparent 0, transparent 50%); background-size: 40px 40px;"></div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="text-center mb-20" data-aos="fade-down">
+                    <span class="text-luxe-gold font-semibold tracking-[0.2em] uppercase text-sm mb-2 block">The D2 Difference</span>
+                    <h2 class="text-3xl md:text-5xl font-serif font-bold text-white mt-2 mb-6">Uncompromising Quality</h2>
+                    <div class="w-20 h-1 bg-luxe-red mx-auto"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div data-aos="slide-up" data-aos-delay="100" class="text-center group">
+                        <div class="w-20 h-20 bg-luxe-gold/10 border border-luxe-gold/30 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:bg-luxe-gold transition-colors duration-300">
+                            <i class="fa-solid fa-wrench text-3xl text-luxe-gold group-hover:text-luxe-dark transition-colors"></i>
+                        </div>
+                        <h3 class="text-xl font-serif font-bold text-white mb-4">Impeccable Maintenance</h3>
+                        <p class="text-gray-400 font-light leading-relaxed group-hover:text-white transition-colors">Every motorcycle undergoes rigorous inspection and detailing prior to each rental to ensure safety and performance.</p>
+                    </div>
+                    <div data-aos="zoom-in" data-aos-delay="200" class="text-center group">
+                        <div class="w-20 h-20 bg-luxe-gold/10 border border-luxe-gold/30 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:bg-luxe-gold transition-colors duration-300">
+                            <i class="fa-solid fa-helmet-safety text-3xl text-luxe-gold group-hover:text-luxe-dark transition-colors"></i>
+                        </div>
+                        <h3 class="text-xl font-serif font-bold text-white mb-4">Premium Gear</h3>
+                        <p class="text-gray-400 font-light leading-relaxed group-hover:text-white transition-colors">We provide helmets complimentary for your safety and comfort.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Locations -->
+        <section id="locations" class="py-24 bg-luxe-bg relative border-b border-luxe-gold/20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="text-center mb-16" data-aos="fade-down">
+                    <span class="text-luxe-red font-bold tracking-[0.2em] uppercase text-sm mb-2 block">Visit Us</span>
+                    <h2 class="text-3xl md:text-5xl font-serif font-bold text-luxe-dark mt-2 mb-6">Our Locations</h2>
+                    <div class="w-20 h-1 bg-luxe-gold mx-auto"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10" id="locations-container">
+                    <!-- Map 1 -->
+                    <div data-aos="fade-right" data-aos-delay="100" class="bg-luxe-card p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 flex flex-col group hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-shadow duration-300">
+                        <div class="flex items-center justify-center gap-3 mb-6">
+                            <i class="fa-solid fa-location-dot text-luxe-red text-xl"></i>
+                            <h3 class="text-2xl font-serif font-bold text-luxe-dark">D2 Bike Changklan</h3>
+                        </div>
+                        <div class="w-full h-80 rounded-xl overflow-hidden border border-gray-200">
+                            <iframe src="https://maps.google.com/maps?q=D2%20Bike%20Changklan&t=&z=15&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                        <a id="link-changklan" href="https://maps.app.goo.gl/9aBdzGDwHWFh6Vxj7" target="_blank" class="mt-6 block text-center bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white py-4 rounded-lg uppercase tracking-widest text-sm font-semibold transition-colors duration-300 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-map-location-dot"></i> Get Directions
+                        </a>
+                    </div>
+                    <!-- Map 2 -->
+                    <div data-aos="fade-left" data-aos-delay="200" class="bg-luxe-card p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 flex flex-col group hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-shadow duration-300">
+                        <div class="flex items-center justify-center gap-3 mb-6">
+                            <i class="fa-solid fa-location-dot text-luxe-red text-xl"></i>
+                            <h3 class="text-2xl font-serif font-bold text-luxe-dark">D2 Bike Nimman</h3>
+                        </div>
+                        <div class="w-full h-80 rounded-xl overflow-hidden border border-gray-200">
+                            <iframe src="https://maps.google.com/maps?q=D2%20Bike%20Nimman&t=&z=15&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                        <a id="link-nimman" href="https://maps.app.goo.gl/QLz5bGJE1W7AotJx8" target="_blank" class="mt-6 block text-center bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white py-4 rounded-lg uppercase tracking-widest text-sm font-semibold transition-colors duration-300 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-map-location-dot"></i> Get Directions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer id="contact" class="bg-[#050505] pt-20 pb-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                    <div class="col-span-1 md:col-span-1" data-aos="fade-right" data-aos-delay="100">
+                        <a href="#" class="block hover:scale-105 transition-transform duration-300 w-fit mb-6">
+                            <div class="flex flex-col items-end bg-[#FCEE21] px-3 py-1 rounded shadow-md border border-yellow-400/50">
+                                <span class="text-[10px] md:text-[11px] font-bold text-black leading-none mb-0.5 tracking-wide font-sans">ดีทู-ไบค์</span>
+                                <div class="flex items-baseline font-black italic text-black font-sans leading-none tracking-tighter">
+                                    <span class="text-2xl md:text-3xl">D</span>
+                                    <span class="text-lg md:text-xl transform -translate-y-2.5 -ml-0.5">2</span>
+                                    <span class="text-2xl md:text-3xl ml-0.5">-Bike</span>
+                                </div>
+                            </div>
+                        </a>
+                        <p class="text-gray-400 font-light text-sm leading-relaxed mb-6">
+                            Elevating your travel experience with premium motorcycle rentals in Chiang Mai, Thailand.
+                        </p>
+                    </div>
+                    <div data-aos="fade-up" data-aos-delay="200">
+                        <h4 class="text-sm font-bold uppercase tracking-widest text-luxe-gold mb-6">Explore</h4>
+                        <ul class="space-y-4">
+                            <li><a href="#home" class="text-gray-400 font-light hover:text-white transition flex items-center gap-3"><span class="w-2 h-[1px] bg-luxe-gold"></span> Home</a></li>
+                            <li><a href="#fleet" class="text-gray-400 font-light hover:text-white transition flex items-center gap-3"><span class="w-2 h-[1px] bg-luxe-gold"></span> Our Fleet</a></li>
+                            <li><a href="#locations" class="text-gray-400 font-light hover:text-white transition flex items-center gap-3"><span class="w-2 h-[1px] bg-luxe-gold"></span> Locations</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-span-1 md:col-span-2" data-aos="fade-left" data-aos-delay="300">
+                        <h4 class="text-sm font-bold uppercase tracking-widest text-luxe-gold mb-6">Contact Us</h4>
+                        <div class="space-y-6">
+                            <div class="flex items-start gap-4 group cursor-pointer">
+                                <i class="fa-solid fa-location-dot text-luxe-gold mt-1 group-hover:text-luxe-red transition-colors"></i>
+                                <p id="text-address" class="text-gray-400 font-light group-hover:text-white transition-colors">Changklan & Nimman, Chiang Mai, Thailand.</p>
+                            </div>
+                            <div class="flex items-center gap-4 group cursor-pointer">
+                        <i class="fa-solid fa-envelope text-luxe-gold group-hover:text-luxe-red transition-colors"></i>
+                        <p id="text-email" class="text-gray-400 font-light group-hover:text-white transition-colors">concierge@d2bikerental.com</p>
+                    </div>
+                </div>
+                <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4" data-aos="zoom-in" data-aos-delay="400">
+                    <p class="text-gray-500 font-light text-xs uppercase tracking-widest">
+                        <!-- Secret Admin Trigger on the Copyright Symbol -->
+                        <span id="admin-trigger" class="cursor-pointer hover:text-luxe-gold" title="Admin Login">&copy;</span> 2026 D2 Bike Rental. All rights reserved.
+                    </p>
+                    <div class="flex gap-4">
+                        <a id="link-ig" href="#" class="text-gray-500 hover:text-luxe-gold transition"><i class="fa-brands fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Floating Social Menu -->
+        <div id="fab-wrapper" class="fab-container fixed bottom-6 right-6 z-50 flex flex-col items-center">
+            <a id="fab-fb" href="#" class="social-btn fab-item fab-item-1 w-12 h-12 bg-[#1877F2] text-white rounded-full flex items-center justify-center shadow-lg border border-white/20">
+                <i class="fa-brands fa-facebook-f text-xl"></i>
+                <span class="tooltip absolute right-[120%] mr-2 bg-luxe-dark text-white font-semibold text-xs px-3 py-1.5 rounded shadow-xl whitespace-nowrap opacity-0 invisible transition-all duration-300">Facebook</span>
+            </a>
+            <a id="fab-wa" href="#" class="social-btn fab-item fab-item-2 w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-lg border border-white/20">
+                <i class="fa-brands fa-whatsapp text-2xl"></i>
+                <span class="tooltip absolute right-[120%] mr-2 bg-luxe-dark text-white font-semibold text-xs px-3 py-1.5 rounded shadow-xl whitespace-nowrap opacity-0 invisible transition-all duration-300">WhatsApp</span>
+            </a>
+            <a id="fab-line" href="#" class="social-btn fab-item fab-item-3 w-12 h-12 bg-[#00B900] text-white rounded-full flex items-center justify-center shadow-lg border border-white/20">
+                <i class="fa-brands fa-line text-2xl"></i>
+                <span class="tooltip absolute right-[120%] mr-2 bg-luxe-dark text-white font-semibold text-xs px-3 py-1.5 rounded shadow-xl whitespace-nowrap opacity-0 invisible transition-all duration-300">Line</span>
+            </a>
+            <a id="fab-wechat" href="#" class="social-btn fab-item fab-item-4 w-12 h-12 bg-[#07C160] text-white rounded-full flex items-center justify-center shadow-lg border border-white/20">
+                <i class="fa-brands fa-weixin text-2xl"></i>
+                <span class="tooltip absolute right-[120%] mr-2 bg-luxe-dark text-white font-semibold text-xs px-3 py-1.5 rounded shadow-xl whitespace-nowrap opacity-0 invisible transition-all duration-300">WeChat</span>
+            </a>
+            <a id="fab-kakao" href="#" class="social-btn fab-item fab-item-5 w-12 h-12 bg-[#FEE500] text-[#371D1E] rounded-full flex items-center justify-center shadow-lg border border-black/10">
+                <i class="fa-solid fa-comment text-xl"></i>
+                <span class="tooltip absolute right-[120%] mr-2 bg-luxe-dark text-white font-semibold text-xs px-3 py-1.5 rounded shadow-xl whitespace-nowrap opacity-0 invisible transition-all duration-300">KakaoTalk</span>
+            </a>
+            <button id="fab-main" class="relative z-50 px-6 py-3.5 bg-luxe-dark text-luxe-gold rounded-full flex items-center gap-3 shadow-[0_10px_40px_rgba(0,0,0,0.3)] hover:bg-black border border-luxe-gold/30 cursor-pointer outline-none transition-all duration-300">
+                <span class="font-sans font-bold tracking-widest text-sm uppercase">Contact Us</span>
+                <div class="relative w-5 h-5 flex items-center justify-center">
+                    <i id="fab-icon-open" class="fa-solid fa-comment-dots text-lg"></i>
+                    <i id="fab-icon-close" class="fa-solid fa-xmark text-xl"></i>
+                </div>
             </button>
         </div>
-        <p class="text-[11px] text-center text-slate-500 mt-2">
-            <i class="fa-solid fa-circle-info"></i> အကောင့်ဖွင့်ရန်နှင့် Credit ဝယ်ယူရန် Admin ထံ ဆက်သွယ်ပါ။
-        </p>
+    </div> <!-- END PUBLIC WRAPPER -->
+
+    <!-- ==========================================
+         HIDDEN ADMIN PANEL MODAL 
+         ========================================== -->
+    <div id="admin-modal" class="fixed inset-0 z-[100] bg-admin-bg text-white hidden flex-col font-sans">
+        
+        <!-- Login View -->
+        <div id="admin-login-view" class="flex-1 flex items-center justify-center p-4">
+            <div class="bg-admin-card p-8 rounded-2xl shadow-2xl max-w-sm w-full border border-gray-700">
+                <div class="text-center mb-8">
+                    <i class="fa-solid fa-lock text-admin-accent text-4xl mb-3"></i>
+                    <h2 class="text-2xl font-bold">Admin Portal</h2>
+                    <p class="text-gray-400 text-sm mt-2">D2 Bike Rental Management</p>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Username</label>
+                        <input type="text" id="admin-user" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-3 text-white focus:border-admin-accent outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Password</label>
+                        <input type="password" id="admin-pass" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-3 text-white focus:border-admin-accent outline-none">
+                    </div>
+                    <p id="admin-error" class="text-red-500 text-sm hidden">Invalid credentials!</p>
+                    <button id="btn-login" class="w-full bg-admin-accent hover:bg-yellow-600 text-black font-bold py-3 rounded mt-4 transition">Login</button>
+                    <button id="btn-close-login" class="w-full text-gray-400 hover:text-white py-2 mt-2 text-sm">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="admin-dashboard-view" class="hidden flex-1 flex flex-col h-screen overflow-hidden">
+            <!-- Header -->
+            <header class="bg-admin-card border-b border-gray-700 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-shrink-0">
+                <div class="flex items-center justify-between w-full sm:w-auto">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-motorcycle text-admin-accent text-xl"></i>
+                        <h1 class="font-bold text-lg">D2 Bike Admin</h1>
+                    </div>
+                    <!-- Mobile Menu Button for Admin Tabs -->
+                    <button id="admin-menu-toggle" class="sm:hidden text-gray-400 hover:text-white focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <button id="btn-save-all" class="flex-1 sm:flex-none justify-center bg-green-600 hover:bg-green-500 px-4 py-2 rounded text-sm font-bold shadow-lg transition flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> <span class="hidden sm:inline">Save Changes</span><span class="sm:hidden">Save</span>
+                    </button>
+                    <button id="btn-logout" class="text-gray-400 hover:text-white px-3 py-2 text-sm bg-gray-800 rounded sm:bg-transparent"><i class="fa-solid fa-sign-out-alt"></i></button>
+                </div>
+            </header>
+
+            <!-- Main Content Area -->
+            <div class="flex flex-col sm:flex-row flex-1 overflow-hidden relative">
+                
+                <!-- Sidebar / Mobile Top Nav -->
+                <div id="admin-sidebar" class="w-full sm:w-64 bg-admin-card border-b sm:border-b-0 sm:border-r border-gray-700 p-4 space-y-2 flex-shrink-0 absolute sm:relative z-10 hidden sm:block transform transition-transform duration-300">
+                    <button class="admin-tab active w-full text-left px-4 py-3 rounded bg-[#1e1e2f] text-admin-accent border border-admin-accent" data-target="tab-fleet">
+                        <i class="fa-solid fa-motorcycle w-6"></i> Fleet & Prices
+                    </button>
+                    <button class="admin-tab w-full text-left px-4 py-3 rounded text-gray-400 hover:bg-[#1e1e2f] transition" data-target="tab-links">
+                        <i class="fa-solid fa-link w-6"></i> Social Links & Maps
+                    </button>
+                    <button class="admin-tab w-full text-left px-4 py-3 rounded text-gray-400 hover:bg-[#1e1e2f] transition" data-target="tab-contact">
+                        <i class="fa-solid fa-address-book w-6"></i> Contact Info
+                    </button>
+                </div>
+
+                <!-- Editors Container -->
+                <!-- Changed p-6 to p-4 for better mobile spacing, and added w-full max-w-full -->
+                <div class="flex-1 p-4 sm:p-6 overflow-y-auto admin-scroll bg-[#1e1e2f] w-full max-w-full">
+                    
+                    <!-- TAB: FLEET -->
+                    <div id="tab-fleet" class="admin-panel-content w-full">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                            <h2 class="text-xl sm:text-2xl font-bold">Manage Fleet</h2>
+                            <button id="btn-add-bike" class="bg-admin-accent text-black px-4 py-2 rounded text-sm font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i> Add New Bike</button>
+                        </div>
+                        <div id="admin-fleet-list" class="space-y-6 w-full">
+                            <!-- JS will render fleet editors here -->
+                        </div>
+                    </div>
+
+                    <!-- TAB: LINKS -->
+                    <div id="tab-links" class="admin-panel-content hidden max-w-2xl w-full mx-auto sm:mx-0">
+                        <h2 class="text-xl sm:text-2xl font-bold mb-6">Social & Map Links</h2>
+                        <div class="bg-admin-card p-4 sm:p-6 rounded-xl border border-gray-700 space-y-4">
+                            <div><label class="block text-sm text-gray-400 mb-1">Facebook URL</label><input type="text" id="inp-fb" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <div><label class="block text-sm text-gray-400 mb-1">WhatsApp URL</label><input type="text" id="inp-wa" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <div><label class="block text-sm text-gray-400 mb-1">Line URL</label><input type="text" id="inp-line" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <div><label class="block text-sm text-gray-400 mb-1">WeChat URL</label><input type="text" id="inp-wechat" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <div><label class="block text-sm text-gray-400 mb-1">KakaoTalk URL</label><input type="text" id="inp-kakao" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <div><label class="block text-sm text-gray-400 mb-1">Instagram URL</label><input type="text" id="inp-ig" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <hr class="border-gray-700 my-4">
+                            <div><label class="block text-sm text-gray-400 mb-1">D2 Bike Changklan Map Link</label><input type="text" id="inp-map-changklan" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                            <div><label class="block text-sm text-gray-400 mb-1">D2 Bike Nimman Map Link</label><input type="text" id="inp-map-nimman" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: CONTACT -->
+                    <div id="tab-contact" class="admin-panel-content hidden max-w-2xl w-full mx-auto sm:mx-0">
+                        <h2 class="text-xl sm:text-2xl font-bold mb-6">Contact Information</h2>
+                        <div class="bg-admin-card p-4 sm:p-6 rounded-xl border border-gray-700 space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Address Display Text</label>
+                                <input type="text" id="inp-address" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Email Address</label>
+                                <input type="text" id="inp-email" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2 text-white">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Toast Notification -->
+            <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded shadow-lg transition-all duration-300 opacity-0 translate-y-10 pointer-events-none z-50">
+                Saved successfully!
+            </div>
+        </div>
     </div>
 
-    <!-- ================= MAIN APP SHELL ================= -->
-    <div id="appShell" class="hidden h-screen w-full flex bg-[#020617]">
+
+    <!-- AOS Animation Library JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- APPLICATION LOGIC (Public & Admin) -->
+    <script>
+        // ==========================================
+        // 1. DATA MODEL (State Management)
+        // ==========================================
+        const defaultData = {
+            contact: {
+                address: "Changklan & Nimman, Chiang Mai, Thailand.",
+                email: "concierge@d2bikerental.com"
+            },
+            links: {
+                fb: "#", wa: "#", line: "#", wechat: "#", kakao: "#", ig: "#",
+                mapChangklan: "https://maps.app.goo.gl/9aBdzGDwHWFh6Vxj7",
+                mapNimman: "https://maps.app.goo.gl/QLz5bGJE1W7AotJx8"
+            },
+            fleet: [
+                {
+                    id: Date.now() + 1,
+                    title: "Standard Series",
+                    subtitle: "Older Models 110/125cc",
+                    badge: "",
+                    images: ["https://images.unsplash.com/photo-1558981403-c5f9899a28bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+                    prices: [
+                        { label: "1 Day", val: "200 Baht" }, { label: "5 Days", val: "900 Baht" },
+                        { label: "1 Week", val: "1,100 Baht" }, { label: "2 Weeks", val: "1,800 Baht" },
+                        { label: "1 Month", val: "2,700 Baht" }
+                    ]
+                },
+                {
+                    id: Date.now() + 2,
+                    title: "Comfort Series",
+                    subtitle: "Newer Models 110/125cc",
+                    badge: "Popular",
+                    images: ["https://images.unsplash.com/photo-1621007947382-bb3c3994e3fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+                    prices: [
+                        { label: "1 Day", val: "250 Baht" }, { label: "5 Days", val: "1,100 Baht" },
+                        { label: "1 Week", val: "1,300 Baht" }, { label: "2 Weeks", val: "2,000 Baht" },
+                        { label: "1 Month", val: "3,000 Baht" }
+                    ]
+                },
+                {
+                    id: Date.now() + 3,
+                    title: "Sport Series",
+                    subtitle: "2019 Models 150cc",
+                    badge: "",
+                    images: ["https://images.unsplash.com/photo-1512850692650-af8acae6bb3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+                    prices: [
+                        { label: "1 Day", val: "400 Baht" }, { label: "5 Days", val: "1,750 Baht" },
+                        { label: "1 Week", val: "1,900 Baht" }, { label: "2 Weeks", val: "3,000 Baht" },
+                        { label: "1 Month", val: "5,000 Baht" }
+                    ]
+                },
+                {
+                    id: Date.now() + 4,
+                    title: "Executive Series",
+                    subtitle: "2023 Models 155cc",
+                    badge: "",
+                    images: ["https://images.unsplash.com/photo-1599380922849-063a8a0b0649?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+                    prices: [
+                        { label: "1 Day", val: "500 Baht" }, { label: "5 Days", val: "2,000 Baht" },
+                        { label: "1 Week", val: "2,300 Baht" }, { label: "2 Weeks", val: "3,600 Baht" },
+                        { label: "1 Month", val: "5,500 Baht" }
+                    ]
+                },
+                {
+                    id: Date.now() + 5,
+                    title: "Maxi Touring",
+                    subtitle: "Premium 300cc",
+                    badge: "Flagship",
+                    images: ["https://images.unsplash.com/photo-1605338048206-8d695c0dcad7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
+                    prices: [
+                        { label: "1 Day", val: "700 Baht" }, { label: "5 Days", val: "3,000 Baht" },
+                        { label: "1 Week", val: "4,000 Baht" }, { label: "2 Weeks", val: "6,000 Baht" },
+                        { label: "1 Month", val: "8,000 Baht" }
+                    ]
+                }
+            ]
+        };
+
+        // Load from local storage or use defaults
+        let appData = JSON.parse(localStorage.getItem('d2bike_appData')) || defaultData;
         
-        <!-- LEFT SIDEBAR -->
-        <aside class="w-64 bg-[#0B1120] border-r border-slate-800/60 flex flex-col justify-between hidden md:flex shrink-0">
-            <div class="p-6 flex items-center gap-2 border-b border-slate-800/60 mb-4">
-                <div class="app-logo-box font-black text-2xl logo-font tracking-tighter">D</div>
-                <div class="text-white font-black text-xl logo-font tracking-tighter">STUDIO</div>
-            </div>
+        // Track current image index for each bike on public view
+        const currentImageIndices = {};
+        
+        // Auto Slideshow Timer Array
+        const autoSlideTimers = {};
 
-            <nav class="flex-1 px-4 space-y-2">
-                <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 mt-2">Applications</p>
-                
-                <button id="navGhost" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-active">
-                    <i class="fa-solid fa-ghost text-lg w-6 text-left"></i> 
-                    <span>D Ghost</span>
-                </button>
-                
-                <button id="navNews" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-inactive">
-                    <i class="fa-solid fa-satellite-dish text-lg w-6 text-left"></i> 
-                    <span>D News</span>
-                </button>
-
-                <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 mt-6">Settings</p>
-                
-                <button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all tab-inactive opacity-50 cursor-not-allowed">
-                    <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-left"></i> 
-                    <span>History</span>
-                </button>
-            </nav>
-
-            <div class="p-4 border-t border-slate-800/60">
-                <div class="bg-[#1e293b] rounded-2xl p-4 flex flex-col gap-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 shrink-0">
-                            <i class="fa-solid fa-user"></i>
-                        </div>
-                        <div class="flex flex-col overflow-hidden">
-                            <span id="displayName" class="text-sm font-bold text-white truncate">User</span>
-                            <span class="text-xs text-emerald-400 font-mono font-bold mt-0.5"><i class="fa-solid fa-coins text-[10px]"></i> <span id="creditDisplay">0</span> Credits</span>
-                        </div>
-                    </div>
-                    <button id="btnLogout" class="w-full bg-slate-800 hover:bg-red-950 hover:text-red-400 text-slate-300 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2 mt-1">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
-                    </button>
-                </div>
-            </div>
-        </aside>
-
-        <!-- MAIN CONTENT AREA -->
-        <main class="flex-1 overflow-y-auto p-4 md:p-8 w-full relative">
+        // ==========================================
+        // 2. PUBLIC VIEW RENDERING
+        // ==========================================
+        function renderPublicView() {
+            // Update Texts & Links
+            document.getElementById('text-address').textContent = appData.contact.address;
+            document.getElementById('text-email').textContent = appData.contact.email;
             
-            <div class="max-w-6xl mx-auto mb-8">
-                <h1 id="pageTitle" class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">Create Your Story.</h1>
-                <p id="pageSubtitle" class="text-slate-400 text-sm">Professional horror video generation toolset v1.0</p>
-            </div>
+            document.getElementById('fab-fb').href = appData.links.fb;
+            document.getElementById('fab-wa').href = appData.links.wa;
+            document.getElementById('fab-line').href = appData.links.line;
+            document.getElementById('fab-wechat').href = appData.links.wechat;
+            document.getElementById('fab-kakao').href = appData.links.kakao;
 
-            <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+            // Clear previous timers to prevent multiple intervals running
+            Object.values(autoSlideTimers).forEach(timer => clearInterval(timer));
+
+            // Render Fleet
+            const fleetContainer = document.getElementById('fleet-container');
+            fleetContainer.innerHTML = ''; // Clear
+
+            appData.fleet.forEach((bike, index) => {
+                currentImageIndices[bike.id] = 0; // init index
+                let delay = 100 * ((index % 3) + 1);
                 
-                <!-- Panel 1: Generate -->
-                <div class="lg:col-span-5 glass-card p-6 md:p-8 flex flex-col gap-5 h-fit relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-red-600/10 blur-3xl rounded-full pointer-events-none"></div>
+                // Determine animation direction based on index to create a staggered effect
+                let aosEffect = "fade-up";
+                if(index % 3 === 0) aosEffect = "fade-right";
+                else if(index % 3 === 2) aosEffect = "fade-left";
 
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center text-red-500">
-                            <i class="fa-solid fa-book-skull text-lg" id="panelIcon"></i>
+                // Construct Price Rows
+                let priceHtml = bike.prices.map(p => `
+                    <li class="flex justify-between border-b border-gray-100 pb-3 group/item">
+                        <span class="text-luxe-dark font-medium group-hover/item:text-luxe-gold transition">${p.label}</span>
+                        <span class="font-bold text-luxe-red">${p.val}</span>
+                    </li>
+                `).join('');
+
+                // Construct Image Controls if multiple
+                let controlsHtml = '';
+                if (bike.images.length > 1) {
+                    controlsHtml = `
+                        <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 z-10">
+                            ${bike.images.map((_, i) => `<div class="w-1.5 h-1.5 rounded-full ${i===0?'bg-luxe-gold':'bg-white/50'} img-dot-${bike.id}"></div>`).join('')}
                         </div>
-                        <h2 class="text-lg font-bold text-white" id="panelTitle">AI Ghost Story Gen</h2>
-                    </div>
+                    `;
                     
-                    <div class="mt-2">
-                        <label class="text-xs text-slate-400 font-bold mb-2 block uppercase tracking-wider ml-1">Language</label>
-                        <div class="flex items-center bg-[#1e293b] p-3.5 rounded-xl border border-slate-700 focus-within:border-red-500 transition-colors">
-                            <i class="fa-solid fa-earth-asia text-slate-500 ml-1"></i>
-                            <select id="languageSelect" class="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer w-full ml-3 appearance-none">
-                                <option value="Burmese">မြန်မာ (Myanmar)</option>
-                                <option value="English">English</option>
-                                <option value="Korean">한국어 (Korean)</option>
-                                <option value="Japanese">日本語 (Japanese)</option>
-                                <option value="Thai">ภาษาไทย (Thai)</option>
-                            </select>
-                            <i class="fa-solid fa-chevron-down text-slate-500 text-xs pointer-events-none pr-2"></i>
+                    // Setup Auto Slide for this bike
+                    autoSlideTimers[bike.id] = setInterval(() => {
+                        autoChangeImage(bike.id);
+                    }, 3000); // 3 seconds interval
+                }
+
+                // Badge
+                let badgeHtml = bike.badge ? `<div class="absolute top-4 right-4 ${bike.badge.toLowerCase()==='flagship'?'bg-luxe-dark text-luxe-gold border border-luxe-gold/50':'bg-luxe-gold text-white'} text-xs font-bold uppercase tracking-wider px-3 py-1 z-10 shadow-lg">${bike.badge}</div>` : '';
+
+                // Final HTML
+                const card = document.createElement('div');
+                card.className = "bg-luxe-card rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-all duration-500 flex flex-col w-full border border-gray-100 group relative";
+                
+                // Set AOS Attributes for Animation
+                card.setAttribute('data-aos', aosEffect);
+                card.setAttribute('data-aos-delay', delay.toString());
+                
+                card.innerHTML = `
+                    ${badgeHtml}
+                    <div class="relative h-60 overflow-hidden bg-gray-100">
+                        <img id="img-${bike.id}" src="${bike.images[0]}" alt="${bike.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out">
+                        ${controlsHtml}
+                    </div>
+                    <div class="p-8 flex-grow flex flex-col bg-luxe-card">
+                        <h3 class="text-2xl font-serif font-bold text-luxe-dark mb-1">${bike.title}</h3>
+                        <p class="text-luxe-red font-medium text-sm mb-6 uppercase tracking-wider">${bike.subtitle}</p>
+                        <div class="flex-grow mb-8">
+                            <ul class="space-y-4 text-sm">${priceHtml}</ul>
+                        </div>
+                        <a href="#contact" class="mt-auto block text-center w-full bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white uppercase tracking-widest text-sm font-semibold py-4 transition-colors duration-300">Book Now</a>
+                    </div>
+                `;
+                fleetContainer.appendChild(card);
+            });
+            
+            // CRITICAL: Refresh AOS after DOM elements are created
+            // Using a slightly longer timeout ensures DOM is fully painted
+            setTimeout(() => { 
+                if(typeof AOS !== 'undefined') {
+                    AOS.refresh(); 
+                }
+            }, 150);
+        }
+
+        // Auto Image slider function for public view
+        window.autoChangeImage = function(bikeId) {
+            const bike = appData.fleet.find(b => b.id === bikeId);
+            if (!bike || bike.images.length <= 1) return;
+            
+            let currentIndex = currentImageIndices[bikeId];
+            currentIndex += 1; // Always go to the next image
+            if (currentIndex >= bike.images.length) currentIndex = 0; // Loop back to start
+            
+            currentImageIndices[bikeId] = currentIndex;
+            
+            // Update Image SRC
+            const imgElement = document.getElementById(`img-${bikeId}`);
+            if (imgElement) {
+                imgElement.src = bike.images[currentIndex];
+            }
+            
+            // Update Dots
+            const dots = document.querySelectorAll(`.img-dot-${bikeId}`);
+            dots.forEach((dot, idx) => {
+                if(idx === currentIndex) {
+                    dot.classList.remove('bg-white/50'); dot.classList.add('bg-luxe-gold');
+                } else {
+                    dot.classList.remove('bg-luxe-gold'); dot.classList.add('bg-white/50');
+                }
+            });
+        }
+
+
+        // ==========================================
+        // 3. ADMIN PANEL LOGIC
+        // ==========================================
+        const adminModal = document.getElementById('admin-modal');
+        const loginView = document.getElementById('admin-login-view');
+        const dashView = document.getElementById('admin-dashboard-view');
+        const adminSidebar = document.getElementById('admin-sidebar');
+        
+        // Open Admin Trigger
+        document.getElementById('admin-trigger').addEventListener('click', () => {
+            adminModal.classList.remove('hidden');
+            adminModal.classList.add('flex');
+            loginView.classList.remove('hidden');
+            dashView.classList.add('hidden');
+            document.getElementById('admin-error').classList.add('hidden');
+        });
+
+        // Close Admin Login
+        document.getElementById('btn-close-login').addEventListener('click', () => {
+            adminModal.classList.add('hidden'); adminModal.classList.remove('flex');
+        });
+
+        // Login Action
+        document.getElementById('btn-login').addEventListener('click', () => {
+            const u = document.getElementById('admin-user').value;
+            const p = document.getElementById('admin-pass').value;
+            if(u === 'admin' && p === '1234') {
+                loginView.classList.add('hidden');
+                dashView.classList.remove('hidden');
+                dashView.classList.add('flex');
+                populateAdminForms();
+                document.getElementById('admin-pass').value = ''; // clear pass
+            } else {
+                document.getElementById('admin-error').classList.remove('hidden');
+            }
+        });
+
+        // Logout
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            adminModal.classList.add('hidden'); adminModal.classList.remove('flex');
+            dashView.classList.add('hidden'); dashView.classList.remove('flex');
+        });
+
+        // Mobile Admin Menu Toggle
+        document.getElementById('admin-menu-toggle').addEventListener('click', () => {
+            adminSidebar.classList.toggle('hidden');
+        });
+
+        // Tabs Logic
+        document.querySelectorAll('.admin-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // Remove active classes
+                document.querySelectorAll('.admin-tab').forEach(t => {
+                    t.classList.remove('bg-[#1e1e2f]', 'text-admin-accent', 'border', 'border-admin-accent');
+                    t.classList.add('text-gray-400');
+                });
+                // Hide all contents
+                document.querySelectorAll('.admin-panel-content').forEach(c => c.classList.add('hidden'));
+                
+                // Set active
+                const targetId = e.currentTarget.getAttribute('data-target');
+                e.currentTarget.classList.remove('text-gray-400');
+                e.currentTarget.classList.add('bg-[#1e1e2f]', 'text-admin-accent', 'border', 'border-admin-accent');
+                document.getElementById(targetId).classList.remove('hidden');
+
+                // Hide sidebar on mobile after clicking a tab
+                if (window.innerWidth < 640) {
+                    adminSidebar.classList.add('hidden');
+                }
+            });
+        });
+
+        // Populating Admin Forms
+        function populateAdminForms() {
+            // Links
+            document.getElementById('inp-fb').value = appData.links.fb;
+            document.getElementById('inp-wa').value = appData.links.wa;
+            document.getElementById('inp-line').value = appData.links.line;
+            document.getElementById('inp-wechat').value = appData.links.wechat;
+            document.getElementById('inp-kakao').value = appData.links.kakao;
+            document.getElementById('inp-ig').value = appData.links.ig;
+            document.getElementById('inp-map-changklan').value = appData.links.mapChangklan;
+            document.getElementById('inp-map-nimman').value = appData.links.mapNimman;
+            // Contact
+            document.getElementById('inp-address').value = appData.contact.address;
+            document.getElementById('inp-email').value = appData.contact.email;
+            
+            // Fleet
+            renderAdminFleet();
+        }
+
+        // Render Fleet Editor Blocks
+        function renderAdminFleet() {
+            const container = document.getElementById('admin-fleet-list');
+            container.innerHTML = '';
+            
+            appData.fleet.forEach((bike, bikeIndex) => {
+                const div = document.createElement('div');
+                div.className = "bg-admin-card border border-gray-700 rounded-xl p-4 sm:p-5 relative w-full"; 
+                
+                let pricesHtml = bike.prices.map((p, pIdx) => `
+                    <div class="flex flex-col sm:flex-row gap-2 mb-3 sm:mb-2 items-center">
+                        <input type="text" value="${p.label}" class="w-full sm:w-1/3 bg-[#1e1e2f] border border-gray-600 rounded p-2 text-sm text-white" onchange="updatePriceLabel(${bike.id}, ${pIdx}, this.value)" placeholder="Label (e.g. 1 Day)">
+                        <div class="flex gap-2 w-full sm:flex-1">
+                            <input type="text" value="${p.val}" class="flex-1 bg-[#1e1e2f] border border-gray-600 rounded p-2 text-sm text-white" onchange="updatePriceValue(${bike.id}, ${pIdx}, this.value)" placeholder="Value (e.g. 500 Baht)">
+                            <button onclick="removePrice(${bike.id}, ${pIdx})" class="bg-red-900/50 text-red-400 hover:text-red-300 px-3 py-2 sm:py-0 rounded flex-shrink-0 flex items-center justify-center" title="Delete Price"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
+                `).join('');
 
-                    <p id="panelDescription" class="text-xs text-slate-400 leading-relaxed mt-1">
-                        ကမ္ဘာတဝှမ်းမှ မတူညီသော စိတ်ဝင်စားဖွယ်ရာ သရဲဇာတ်လမ်းတစ်ပုဒ်ကို ၂ မိနစ်စာ အလိုအလျောက် ရှာဖွေ တင်ဆက်ပေးပါမည်။
-                    </p>
-
-                    <button id="btnGenerate" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(220,38,38,0.3)] uppercase tracking-wider text-sm mt-4">
-                        <i class="fa-solid fa-bolt"></i> <span id="generateBtnText">Generate Story (-1 Credit)</span>
-                    </button>
-
-                    <!-- Status Display -->
-                    <div id="statusContainer" class="hidden p-5 bg-[#020617] rounded-xl border border-slate-800 mt-2">
-                        <div class="flex items-center gap-3 text-emerald-400 text-sm font-bold mb-3" id="statusHeader">
-                            <div class="loader loader-small border-emerald-500 border-l-transparent" id="statusLoader"></div> 
-                            <span id="statusText">Processing...</span>
-                        </div>
-                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                            <div id="generationProgress" class="bg-emerald-500 h-full w-0 transition-all shadow-[0_0_8px_#10b981]"></div>
-                        </div>
-                        <p id="errorLog" class="text-xs text-red-400 mt-4 hidden bg-red-950/50 p-3 rounded-lg border border-red-900/50 leading-relaxed break-words"></p>
-                    </div>
-                </div>
-
-                <!-- Panel 2: Video Player & Output -->
-                <div class="lg:col-span-7 flex flex-col gap-6">
-                    
-                    <!-- Player Card -->
-                    <div class="glass-card p-6 md:p-8 flex flex-col items-center">
-                        <div class="w-full flex items-center justify-between mb-6">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-500">
-                                    <i class="fa-solid fa-display text-lg"></i>
-                                </div>
-                                <h2 class="text-lg font-bold text-white">Preview & Export</h2>
-                            </div>
-                            
-                            <div class="flex items-center gap-2 bg-[#1e293b] border border-slate-700 rounded-lg px-3 py-1.5">
-                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">RES:</span>
-                                <select id="resolutionSelect" class="bg-transparent text-white focus:outline-none text-xs font-mono font-bold cursor-pointer appearance-none outline-none">
-                                    <option value="1920">1080x1920</option>
-                                    <option value="1280" selected>720x1280</option>
-                                    <option value="854">480x854</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="video-container flex-grow flex items-center justify-center mb-6 w-full">
-                            <canvas id="videoCanvas" width="720" height="1280"></canvas>
-                            
-                            <div id="canvasOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#0f172a]/80 z-10 rounded-2xl backdrop-blur-sm border border-slate-800">
-                                <div class="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mb-4 border border-slate-700">
-                                    <i class="fa-solid fa-video-slash text-3xl text-slate-500"></i>
-                                </div>
-                                <p class="text-slate-400 text-sm font-bold uppercase tracking-widest" id="standbyText">Ready to Generate</p>
-                            </div>
-                        </div>
-
-                        <!-- Player Controls -->
-                        <div class="w-full bg-[#020617] p-5 rounded-2xl border border-slate-800">
-                            <div class="w-full flex items-center justify-between gap-4 mb-5">
-                                <span class="text-xs text-red-500 font-mono font-bold w-10 text-right" id="timeCurrent">00:00</span>
-                                <div class="flex-grow bg-slate-800 h-2 rounded-full overflow-hidden relative" id="progressTrack">
-                                    <div id="playbackProgress" class="bg-red-600 h-full w-0 absolute top-0 left-0 pointer-events-none rounded-full"></div>
-                                </div>
-                                <span class="text-xs text-slate-500 font-mono font-bold w-10" id="timeTotal">00:00</span>
-                            </div>
-
-                            <div class="w-full flex flex-col sm:flex-row items-center gap-3">
-                                <button id="btnPlayOnly" class="w-full sm:w-2/5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs shadow-[0_4px_10px_rgba(37,99,235,0.3)]" disabled>
-                                    <i class="fa-solid fa-play fa-lg" id="playIcon"></i> <span id="playText">Play</span>
-                                </button>
-                                <button id="btnStop" class="w-full sm:w-1/5 bg-[#1e293b] hover:bg-slate-700 text-white font-bold py-3.5 px-3 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs" disabled>
-                                    <i class="fa-solid fa-stop fa-lg"></i>
-                                </button>
-                                <button id="btnPlayAndRecord" class="w-full sm:w-2/5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider text-xs shadow-[0_4px_10px_rgba(16,185,129,0.3)]" disabled>
-                                    <i class="fa-solid fa-record-vinyl fa-lg"></i> Export MP4
-                                </button>
-                            </div>
-
-                            <div id="recordingStatus" class="hidden mt-4 p-3 bg-red-950/40 rounded-xl border border-red-900/50 text-center">
-                                <div class="loader loader-small border-red-500 border-l-transparent mb-2"></div>
-                                <p class="text-red-400 text-xs font-bold uppercase tracking-widest animate-pulse" id="recordingText">● Recording in Progress</p>
-                                <p class="text-[10px] text-slate-500 mt-1">Please wait until the video finishes.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- NEW: Social Media Caption Box -->
-                    <div id="captionContainer" class="hidden w-full glass-card p-6 md:p-8 relative shadow-lg">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-sm font-bold text-slate-200 uppercase tracking-widest flex items-center gap-2">
-                                <i class="fa-brands fa-tiktok text-emerald-400 text-lg"></i> Social Media Caption
-                            </span>
-                            <button id="btnCopyCaption" class="text-xs font-bold bg-[#1e293b] hover:bg-slate-700 px-4 py-2 rounded-lg transition-colors border border-slate-700 text-white flex items-center gap-2">
-                                <i class="fa-regular fa-copy"></i> Copy
+                // Image Preview HTML generator
+                let imagesPreviewHtml = bike.images && bike.images.length > 0 
+                    ? bike.images.map((imgSrc, imgIdx) => `
+                        <div class="relative group w-24 h-24 flex-shrink-0 rounded overflow-hidden border border-gray-600">
+                            <img src="${imgSrc}" class="w-full h-full object-cover" />
+                            <button onclick="removeBikeImage(${bike.id}, ${imgIdx})" class="absolute inset-0 bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Remove Image">
+                                <i class="fa-solid fa-trash text-red-500"></i>
                             </button>
                         </div>
-                        <p class="text-xs text-slate-400 mb-3">Copy this highly engaging hook and hashtags to post on TikTok, FB Reels, or YouTube Shorts.</p>
-                        <textarea id="captionText" class="w-full bg-[#020617] text-sm text-slate-300 p-4 rounded-xl border border-slate-800 focus:outline-none focus:border-red-500 resize-none h-40 custom-scrollbar leading-relaxed" readonly></textarea>
+                    `).join('') 
+                    : '<p class="text-gray-500 text-xs italic py-2">No images uploaded yet.</p>';
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-4 gap-4">
+                        <h3 class="font-bold text-lg text-admin-accent truncate flex-1">${bike.title || 'Untitled Bike'}</h3>
+                        <button onclick="deleteBike(${bike.id})" class="text-red-500 hover:text-red-400 text-sm flex-shrink-0 bg-red-900/20 px-3 py-1.5 rounded flex items-center gap-2 transition"><i class="fa-solid fa-trash"></i> <span class="hidden sm:inline">Delete Bike</span></button>
                     </div>
-
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <audio id="audioPlayer" class="hidden" crossorigin="anonymous"></audio>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, onSnapshot, increment } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
-        // ==== Firebase Setup ====
-        const firebaseConfig = {
-            apiKey: "AIzaSyBc7vKszxGtSCrrQ_HnoWnsFwFiwhyhpsQ",
-            authDomain: "dghoststory.firebaseapp.com",
-            projectId: "dghoststory",
-            storageBucket: "dghoststory.firebasestorage.app",
-            messagingSenderId: "234910284312",
-            appId: "1:234910284312:web:202b71c68d21292d7fe16d",
-            measurementId: "G-EQTL6DKGPL"
-        };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // ==== Gemini Config ====
-        const geminiApiKey = ""; // Handled by platform env
-        const modelName = 'gemini-2.5-flash-preview-09-2025';
-
-        // ==== App State ====
-        let currentAppMode = 'ghost'; 
-        let currentUser = null;
-        let currentCredits = 0;
-        let creditListenerUnsubscribe = null;
-        let currentCaption = "";
-
-        // ==== UI Elements ====
-        const loginScreen = document.getElementById('loginScreen');
-        const appShell = document.getElementById('appShell');
-        const usernameInput = document.getElementById('usernameInput');
-        const passwordInput = document.getElementById('passwordInput');
-        const btnLogin = document.getElementById('btnLogin');
-        const btnLogout = document.getElementById('btnLogout');
-        const loginError = document.getElementById('loginError');
-        const displayName = document.getElementById('displayName');
-        const creditDisplay = document.getElementById('creditDisplay');
-        
-        const navGhost = document.getElementById('navGhost');
-        const navNews = document.getElementById('navNews');
-        const pageTitle = document.getElementById('pageTitle');
-        const pageSubtitle = document.getElementById('pageSubtitle');
-        const panelTitle = document.getElementById('panelTitle');
-        const panelDescription = document.getElementById('panelDescription');
-        const panelIcon = document.getElementById('panelIcon');
-        const generateBtnText = document.getElementById('generateBtnText');
-        
-        const btnGenerate = document.getElementById('btnGenerate');
-        const languageSelect = document.getElementById('languageSelect');
-        const resolutionSelect = document.getElementById('resolutionSelect');
-        const btnPlayOnly = document.getElementById('btnPlayOnly');
-        const playIcon = document.getElementById('playIcon');
-        const playText = document.getElementById('playText');
-        const btnStop = document.getElementById('btnStop');
-        const btnPlayAndRecord = document.getElementById('btnPlayAndRecord');
-        const progressTrack = document.getElementById('progressTrack');
-        const errorLog = document.getElementById('errorLog');
-        const standbyText = document.getElementById('standbyText');
-
-        const captionContainer = document.getElementById('captionContainer');
-        const captionText = document.getElementById('captionText');
-        const btnCopyCaption = document.getElementById('btnCopyCaption');
-
-        // Copy logic
-        btnCopyCaption.addEventListener('click', () => {
-            captionText.select();
-            document.execCommand('copy');
-            window.getSelection().removeAllRanges();
-            btnCopyCaption.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> Copied!`;
-            setTimeout(() => {
-                btnCopyCaption.innerHTML = `<i class="fa-regular fa-copy"></i> Copy`;
-            }, 2000);
-        });
-
-        // ==== TAB SWITCHING LOGIC ====
-        navGhost.addEventListener('click', () => switchTab('ghost'));
-        navNews.addEventListener('click', () => switchTab('news'));
-
-        function switchTab(mode) {
-            if (isGenerating || isRecording) {
-                console.log("Please wait until current process finishes.");
-                return;
-            }
-            
-            currentAppMode = mode;
-            stopPlayback();
-            document.getElementById('canvasOverlay').classList.remove('hidden');
-            captionContainer.classList.add('hidden');
-            
-            newsItems = [];
-            anchorImageObj = null;
-            mainStoryHeadline = "";
-            currentCaption = "";
-            drawCanvasFrame(0);
-
-            if (mode === 'ghost') {
-                navGhost.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-active";
-                navNews.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-inactive";
-                
-                panelIcon.className = "fa-solid fa-book-skull text-lg";
-                pageTitle.innerText = "Create Your Story.";
-                pageSubtitle.innerText = "Professional horror video generation toolset v1.0";
-                panelTitle.innerText = "AI Ghost Story Gen";
-                panelDescription.innerText = "ကမ္ဘာတဝှမ်းမှ မတူညီသော စိတ်ဝင်စားဖွယ်ရာ သရဲဇာတ်လမ်းတစ်ပုဒ်ကို ၂ မိနစ်စာ အလိုအလျောက် ရှာဖွေ တင်ဆက်ပေးပါမည်။";
-                generateBtnText.innerText = "Generate Story (-1 Credit)";
-                standbyText.innerText = "Ready to Spook";
-            } else {
-                navNews.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-active";
-                navGhost.className = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all tab-inactive";
-                
-                panelIcon.className = "fa-solid fa-microphone-lines text-lg";
-                pageTitle.innerText = "Create Your Broadcast.";
-                pageSubtitle.innerText = "Professional news broadcast generation toolset v1.0";
-                panelTitle.innerText = "AI News Script Gen";
-                panelDescription.innerText = "ကမ္ဘာတဝန်းမှ အချိန်နှင့်တပြေးညီ (Up-to-date) ဖြစ်သော မတူညီသည့် သတင်း ၅ ပုဒ်ကို အလိုအလျောက် ရှာဖွေတင်ဆက်ပေးပါမည်။";
-                generateBtnText.innerText = "Generate Broadcast (-1 Credit)";
-                standbyText.innerText = "Ready to Broadcast";
-            }
-        }
-
-        // ==== LOGIN LOGIC ====
-        btnLogin.addEventListener('click', async () => {
-            const user = usernameInput.value.trim();
-            const pass = passwordInput.value.trim();
-            if (!user || !pass) return;
-
-            btnLogin.innerHTML = '<div class="loader loader-small border-white border-l-transparent"></div>';
-            loginError.classList.add('hidden');
-            
-            try {
-                const docRef = doc(db, "users", user);
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    const dbData = docSnap.data();
-                    let dbPassword = dbData.password || dbData.Password || dbData["password "] || "";
-                    dbPassword = String(dbPassword).trim();
-
-                    if (dbPassword === pass) {
-                        currentUser = user;
-                        displayName.innerText = dbData.name || user;
-                        
-                        creditListenerUnsubscribe = onSnapshot(docRef, (snap) => {
-                            if (snap.exists()) {
-                                currentCredits = parseInt(snap.data().credits) || 0;
-                                updateCreditUI();
-                            }
-                        });
-
-                        loginScreen.classList.add('hidden');
-                        appShell.classList.remove('hidden');
-                    } else {
-                        loginError.innerHTML = `Password မှားယွင်းနေပါသည်။<br><span class="text-xs text-slate-400 mt-1 block"><b>Hint:</b> သင့် Database တွင် <b>'${dbPassword}'</b> ဖြစ်နေပါသည်။</span>`;
-                        loginError.classList.remove('hidden');
-                    }
-                } else {
-                    loginError.innerHTML = `<b>'${user}'</b> ဆိုသော အကောင့်မရှိပါ။<br><span class="text-xs text-slate-400 mt-1 block">စာလုံးအကြီး/အသေး အတိအကျတူရပါမည်။</span>`;
-                    loginError.classList.remove('hidden');
-                }
-            } catch (error) {
-                loginError.innerHTML = `Database Error: ${error.message}`;
-                loginError.classList.remove('hidden');
-            } finally {
-                btnLogin.innerHTML = 'Login to Studio';
-            }
-        });
-
-        btnLogout.addEventListener('click', () => {
-            if (creditListenerUnsubscribe) creditListenerUnsubscribe();
-            currentUser = null;
-            usernameInput.value = "";
-            passwordInput.value = "";
-            appShell.classList.add('hidden');
-            loginScreen.classList.remove('hidden');
-            stopPlayback();
-        });
-
-        function updateCreditUI() {
-            creditDisplay.innerText = currentCredits;
-            if (currentCredits <= 0) {
-                creditDisplay.parentElement.classList.replace('bg-emerald-900/30', 'bg-red-900/50');
-                creditDisplay.parentElement.classList.replace('border-emerald-500/30', 'border-red-500');
-                creditDisplay.parentElement.classList.replace('text-emerald-400', 'text-red-400');
-            } else {
-                creditDisplay.parentElement.classList.add('bg-emerald-900/30', 'border-emerald-500/30', 'text-emerald-400');
-                creditDisplay.parentElement.classList.remove('bg-red-900/50', 'border-red-500', 'text-red-400');
-            }
-        }
-
-        // ==== FETCH API ====
-        async function fetchWithRetry(urlBase, payload, maxRetries = 5) {
-            const delays = [2000, 4000, 8000, 16000, 32000]; 
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const url = `${urlBase}?key=${geminiApiKey}`;
-                    const res = await fetch(url, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-                    });
-                    if (res.ok) return res;
-                    if (i === maxRetries - 1) {
-                        const errText = await res.text(); throw new Error(`API Error (${res.status}): ${errText}`);
-                    }
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
-                } catch (error) {
-                    if (i === maxRetries - 1) throw new Error(error.message || `Connection Error`);
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
-                }
-            }
-        }
-
-        // ==== GENERATION CONFIGS ====
-        let newsItems = []; let mainStoryHeadline = ""; let isGenerating = false;
-        let currentNewsIndex = 0; let isPlaying = false; let animationFrameId;
-        let canvasContext = document.getElementById('videoCanvas').getContext('2d');
-        let totalDuration = 0; let anchorImageObj = null;
-        let mediaRecorder; let recordedChunks = []; let isRecording = false;
-        let audioContext, analyzer, dataArray;
-
-        const fallbackGhostImages = [
-            "https://images.unsplash.com/photo-1603525283401-499719323149?q=80&w=600&auto=format&fit=crop", 
-            "https://images.unsplash.com/photo-1508344928928-7137b2f4f22c?q=80&w=600&auto=format&fit=crop", 
-            "https://images.unsplash.com/photo-1541198642236-47b1c3127161?q=80&w=600&auto=format&fit=crop"
-        ];
-        const ghostImageStyles = [
-            "A cinematic, eerie ghost apparition in a dark abandoned mansion, dark and moody lighting, highly detailed horror photography, foggy atmosphere, 9:16 aspect ratio",
-            "A terrifying pale ghost woman in a white vintage dress standing at the end of a dark hallway, hyper-realistic, scary atmosphere, vertical 4k"
-        ];
-        const newsImageStyles = [
-            "A cinematic beautiful female news anchor broadcasting live, modern news desk, glowing screens in background, highly detailed professional photography",
-            "A serious professional female news reporter looking directly at camera, CNN TV studio background, 4k resolution"
-        ];
-        
-        // ==== GENERATION LOGIC ====
-        btnGenerate.addEventListener('click', async () => {
-            if (isGenerating) return;
-            
-            if (currentCredits <= 0) {
-                document.getElementById('statusContainer').classList.remove('hidden');
-                document.getElementById('statusLoader').classList.add('hidden');
-                document.getElementById('statusText').innerText = "Credit မလုံလောက်ပါ! (သင့်အကောင့်တွင် ၀ သို့မဟုတ် အနုတ်ပြနေပါသည်)";
-                document.getElementById('statusText').classList.replace('text-emerald-400', 'text-red-500');
-                showErrorLog("Database ထဲတွင် Credit ပြန်ဖြည့်ပါ။");
-                return;
-            }
-            
-            const targetLang = languageSelect.value;
-            
-            isGenerating = true; newsItems = []; anchorImageObj = null; mainStoryHeadline = ""; currentCaption = "";
-            btnGenerate.disabled = true; btnPlayOnly.disabled = true; btnStop.disabled = true; btnPlayAndRecord.disabled = true;
-            document.getElementById('statusContainer').classList.remove('hidden');
-            document.getElementById('statusLoader').classList.remove('hidden');
-            document.getElementById('statusText').classList.replace('text-red-500', 'text-emerald-400');
-            errorLog.classList.add('hidden');
-            captionContainer.classList.add('hidden');
-            stopPlayback();
-            
-            try {
-                updateStatus('Preparing Studio Background...', 5);
-                try {
-                    const promptArr = currentAppMode === 'ghost' ? ghostImageStyles : newsImageStyles;
-                    const randomPrompt = promptArr[Math.floor(Math.random() * promptArr.length)];
-                    const avatarBase64 = await fetchImage(randomPrompt);
                     
-                    anchorImageObj = new Image(); anchorImageObj.crossOrigin = "anonymous";
-                    if(avatarBase64) {
-                        await new Promise(r => { anchorImageObj.onload = r; anchorImageObj.src = avatarBase64; });
-                    } else if (currentAppMode === 'ghost') {
-                        const randomFallback = fallbackGhostImages[Math.floor(Math.random() * fallbackGhostImages.length)];
-                        await new Promise(r => { anchorImageObj.onload = r; anchorImageObj.src = randomFallback; });
-                    }
-                } catch(e) { console.warn("Background generation failed."); }
-
-                updateStatus(`Crafting Content...`, 25);
-                
-                if (currentAppMode === 'ghost') {
-                    await fetchStoryWithRobustParsing(targetLang, modelName);
-                } else {
-                    await fetchNewsWithRobustParsing(targetLang, modelName);
-                }
-
-                for (let i = 0; i < newsItems.length; i++) {
-                    updateStatus(`Generating Voice (Part ${i+1}/${newsItems.length})...`, 30 + ((i+1)/newsItems.length * 50));
-                    let fullText = "";
-                    if (currentAppMode === 'ghost') {
-                        fullText = newsItems[i].paragraphs.join(" ");
-                    } else {
-                        fullText = newsItems[i].headline + "။ " + newsItems[i].paragraphs.join(" ");
-                    }
-                    newsItems[i].audioUrl = await fetchAudio(fullText, targetLang, currentAppMode);
-                    // Add delay to prevent TTS Rate Limit
-                    await new Promise(r => setTimeout(r, 2000));
-                }
-
-                let hasAudio = false;
-                for(let item of newsItems) if(item.audioUrl && !item.audioUrl.includes('translate_tts')) hasAudio = true;
-                if (!hasAudio) throw new Error("အသံဖိုင် ဖန်တီး၍ မရပါ။ (TTS API Failed)");
-
-                updateStatus('Syncing Teleprompter...', 90);
-                await setupDurationsAndSubtitles();
-                
-                updateStatus('Ready to Broadcast!', 100);
-
-                try {
-                    const userDocRef = doc(db, "users", currentUser);
-                    const userSnap = await getDoc(userDocRef);
-                    if (userSnap.exists()) {
-                        let currentVal = parseInt(userSnap.data().credits) || 0;
-                        await updateDoc(userDocRef, { credits: Math.max(0, currentVal - 1) });
-                    }
-                } catch (creditErr) { console.error("Credit update failed", creditErr); }
-
-                setTimeout(() => {
-                    document.getElementById('statusContainer').classList.add('hidden');
-                    
-                    if(currentCaption) {
-                        captionText.value = currentCaption;
-                        captionContainer.classList.remove('hidden');
-                    }
-                }, 2000);
-                
-                document.getElementById('canvasOverlay').classList.add('hidden');
-                btnPlayOnly.disabled = false; btnStop.disabled = false; btnPlayAndRecord.disabled = false;
-                
-                currentNewsIndex = 0;
-                drawCanvasFrame(0);
-
-            } catch (error) {
-                updateStatus('Generation Failed.', 0, true);
-                showErrorLog(error.message);
-            } finally {
-                isGenerating = false; btnGenerate.disabled = false;
-            }
-        });
-
-        function updateStatus(text, percent, isError = false) {
-            document.getElementById('statusText').innerText = text;
-            document.getElementById('generationProgress').style.width = `${percent}%`;
-            if (isError) {
-                document.getElementById('statusText').classList.replace('text-emerald-400', 'text-red-400');
-                document.getElementById('generationProgress').classList.replace('bg-emerald-500', 'bg-red-500');
-            } else {
-                document.getElementById('statusText').classList.replace('text-red-400', 'text-emerald-400');
-                document.getElementById('generationProgress').classList.replace('bg-red-500', 'bg-emerald-500');
-            }
-        }
-        
-        function showErrorLog(msg) { 
-            errorLog.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2 text-lg"></i> <br>${msg.replace(/\n/g, '<br>')}`; 
-            errorLog.classList.remove('hidden'); 
+                    <div class="w-full">
+                        <div class="flex justify-between items-center mb-3 bg-[#1e1e2f] p-2 rounded-t border-b border-gray-700">
+                            <label class="block text-sm font-semibold text-admin-accent px-2"><i class="fa-solid fa-tags mr-2"></i> Price List</label>
+                            <button onclick="addPrice(${bike.id})" class="text-xs text-black font-bold bg-admin-accent hover:bg-yellow-500 px-3 py-1.5 rounded transition shadow"><i class="fa-solid fa-plus mr-1"></i> Add Row</button>
+                        </div>
+                        <div class="bg-[#1e1e2f] p-3 rounded-b border border-t-0 border-gray-700 w-full overflow-x-hidden">
+                            ${pricesHtml || '<p class="text-gray-500 text-xs text-center py-4">No prices added yet. Click "Add Row" to start.</p>'}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
         }
 
-        // ================= GHOST PARSER =================
-        async function fetchStoryWithRobustParsing(language, modelName) {
-            let greeting = language === "Burmese" ? "မင်္ဂလာပါ။ ဒီနေ့အတွက် စိတ်ဝင်စားစရာ သရဲဇာတ်လမ်းတစ်ပုဒ်ကို တင်ဆက်ပေးပါမယ်။" : "Hello. Welcome to today's ghost story.";
-            let promptLangRule = language === "Burmese" ? "Language MUST be STRICTLY: Burmese. ALL text MUST be translated to natural sounding Burmese." : `Language MUST be STRICTLY: ${language}.`;
-            const randomSeed = Math.floor(Math.random() * 100000);
+        // --- Image Upload Handling Logic ---
+        window.handleImageUpload = (event, bikeId) => {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
 
-            const prompt = `Act as an expert storyteller. Provide EXACTLY ONE highly engaging ghost story.
-            Randomly choose an urban legend from: Japanese, Thai, American, European, Korean, or Burmese. Ensure high variety (Random Seed: ${randomSeed}). DO NOT ALWAYS CHOOSE MIRRORS.
-            Divide the story into EXACTLY 4 PARTS.
-            ${promptLangRule}
-            CRITICAL: Make each part detailed. Write 3 to 4 engaging paragraphs per part so the story is long enough.
-            The very first paragraph of PART 1 MUST start with exactly: "${greeting}".
-            
-            Reply ONLY with a valid JSON format. Format EXACTLY like this:
-            {
-              "main_headline": "Title of the Story",
-              "caption": "🔥 Viral social media hook, brief summary, and 5 hashtags (TikTok/FB style).",
-              "parts": [ 
-                { "paragraphs": ["${greeting} Paragraph 1...", "Paragraph 2...", "Paragraph 3..."] },
-                { "paragraphs": ["..."] },
-                { "paragraphs": ["..."] },
-                { "paragraphs": ["..."] }
-              ]
-            }`;
-            
-            const payload = { contents: [{ parts: [{ text: prompt }] }], tools: [{ "google_search": {} }], generationConfig: { temperature: 0.9 } };
-            const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, payload);
-            const data = await res.json();
-            let text = data.candidates[0].content.parts[0].text;
-            
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                try {
-                    const parsedData = JSON.parse(jsonMatch[0]);
-                    mainStoryHeadline = parsedData.main_headline;
-                    newsItems = parsedData.parts;
-                    currentCaption = parsedData.caption;
-                    if(!newsItems || newsItems.length === 0) throw new Error("No parts generated");
-                } catch(e) { throw new Error("AI Parsing Error"); }
-            } else { throw new Error("AI output format error."); }
-        }
+            const bike = appData.fleet.find(x => x.id === bikeId);
+            if (!bike) return;
 
-        // ================= NEWS PARSER (UPGRADED FOR LENGTH & VARIETY) =================
-        async function fetchNewsWithRobustParsing(language, modelName) {
-            let greeting = language === "Burmese" ? "မင်္ဂလာပါ။" : "Hello.";
-            const now = new Date(); 
-            const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            const randomSeed = Math.floor(Math.random() * 100000);
+            // Ensure images array exists
+            if (!bike.images) bike.images = [];
 
-            const prompt = `Act as an expert female news anchor. Today's Date is: ${dateStr}.
-            CRITICAL: You MUST use Google Search to find the LATEST, UP-TO-DATE news. Ensure high variety (Random Seed: ${randomSeed}).
-            Provide EXACTLY 5 DIFFERENT global news events in this order:
-            1. World News  2. Technology  3. Sports  4. Smartphone News  5. Finance News
-            
-            Language MUST be STRICTLY: ${language}.
-            CRITICAL LENGTH FIX: Make each news item detailed and engaging. Write 3 to 4 paragraphs per story (about 80 to 100 words per story) so that it takes about 45 to 60 seconds to read each story. Do NOT make them extremely short. Provide good context and storytelling.
-            First paragraph of the FIRST story MUST start with exactly: "${greeting}"
-            
-            Reply ONLY with a valid JSON format. Format EXACTLY like this:
-            {
-              "caption": "🔥 Catchy viral hook for social media, brief summary, and 5-8 relevant hashtags.",
-              "items": [ 
-                { "category": "World", "headline": "Headline 1", "paragraphs": ["${greeting} Paragraph 1...", "Paragraph 2...", "Paragraph 3..."] },
-                { "category": "Tech", "headline": "Headline 2", "paragraphs": ["..."] },
-                { "category": "Sports", "headline": "Headline 3", "paragraphs": ["..."] },
-                { "category": "Phones", "headline": "Headline 4", "paragraphs": ["..."] },
-                { "category": "Finance", "headline": "Headline 5", "paragraphs": ["..."] }
-              ]
-            }`;
-            
-            const payload = { contents: [{ parts: [{ text: prompt }] }], tools: [{ "google_search": {} }], generationConfig: { temperature: 0.7 } };
-            const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, payload);
-            const data = await res.json();
-            let text = data.candidates[0].content.parts[0].text;
-            
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                try {
-                    const parsedData = JSON.parse(jsonMatch[0]);
-                    newsItems = parsedData.items;
-                    currentCaption = parsedData.caption;
-                } catch(e) { throw new Error("AI Parsing Error"); }
-            } else { throw new Error("AI output format error."); }
-        }
+            Array.from(files).forEach(file => {
+                // Check if file is an image
+                if (!file.type.match('image.*')) return;
 
-        async function fetchImage(prompt) {
-            try {
-                const payload = { instances: { prompt: prompt }, parameters: { sampleCount: 1, aspectRatio: "9:16" } };
-                const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`, payload, 3);
-                const data = await res.json();
-                if (data.predictions && data.predictions[0]) return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
-            } catch(e) {}
-            return null; 
-        }
-
-        async function fetchAudio(text, language, mode) {
-            try {
-                const voiceInstruction = `Say in a natural, clear, and engaging conversational voice at a normal pace: ${text}`;
-                const voiceName = mode === 'ghost' ? 'Aoede' : 'Kore'; // Aoede for storytelling, Kore for news
-                const payload = {
-                    contents: [{ parts: [{ text: voiceInstruction }] }],
-                    generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } } } }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Image = e.target.result;
+                    bike.images.push(base64Image);
+                    // Re-render to show preview
+                    renderAdminFleet();
                 };
-                const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`, payload);
-                const data = await res.json();
-                
-                if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
-                    const inlineData = data.candidates[0].content.parts[0].inlineData;
-                    const sampleRate = parseInt(inlineData.mimeType.match(/rate=(\d+)/)?.[1] || 24000);
-                    return URL.createObjectURL(pcmToWav(inlineData.data, sampleRate));
-                }
-            } catch(e) { console.warn("TTS Error", e); }
-            
-            const langMap = { 'Burmese': 'my', 'English': 'en', 'Korean': 'ko', 'Japanese': 'ja', 'Thai': 'th' };
-            const tl = langMap[language] || 'en';
-            return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.substring(0, 195))}&tl=${tl}&client=tw-ob`;
-        }
-
-        function pcmToWav(pcmBase64, sampleRate) {
-            const binaryString = atob(pcmBase64);
-            const pcmData = new Int16Array(binaryString.length / 2);
-            for (let i = 0; i < binaryString.length; i += 2) pcmData[i / 2] = binaryString.charCodeAt(i) | (binaryString.charCodeAt(i + 1) << 8);
-            const wavBuffer = new ArrayBuffer(44 + pcmData.byteLength); const view = new DataView(wavBuffer);
-            const writeString = (v, offset, str) => { for (let i = 0; i < str.length; i++) v.setUint8(offset + i, str.charCodeAt(i)); };
-            writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + pcmData.byteLength, true); writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeString(view, 36, 'data');
-            view.setUint32(40, pcmData.byteLength, true);
-            for (let i = 0; i < pcmData.length; i++) view.setInt16(44 + i * 2, pcmData[i], true);
-            return new Blob([view], { type: 'audio/wav' });
-        }
-
-        async function setupDurationsAndSubtitles() {
-            totalDuration = 0;
-            for(let item of newsItems) {
-                if(item.audioUrl) {
-                    const tempAudio = new Audio(item.audioUrl);
-                    await new Promise(r => { 
-                        tempAudio.onloadedmetadata = () => { 
-                            if(tempAudio.duration === Infinity || isNaN(tempAudio.duration)) {
-                                tempAudio.currentTime = 1e101;
-                                tempAudio.ontimeupdate = () => {
-                                    tempAudio.ontimeupdate = () => {}; tempAudio.currentTime = 0; item.duration = tempAudio.duration; totalDuration += tempAudio.duration; r();
-                                }
-                            } else { item.duration = tempAudio.duration; totalDuration += tempAudio.duration; r(); }
-                        };
-                        tempAudio.onerror = () => { item.duration = 5; totalDuration += 5; r(); }; 
-                    });
-
-                    let fullTextForAudio = "";
-                    if (currentAppMode === 'ghost') {
-                        fullTextForAudio = item.paragraphs.join(""); 
-                    } else {
-                        fullTextForAudio = item.headline + "။ " + item.paragraphs.join("");
-                        item.subtitles = [];
-                    }
-                    
-                    const totalChars = fullTextForAudio.length;
-                    item.subtitles = []; 
-                    let accumulatedTime = 0;
-
-                    if (currentAppMode === 'news') {
-                        const headlineTime = ((item.headline.length + 2) / totalChars) * item.duration;
-                        item.subtitles.push({ text: "...", start: 0, end: headlineTime });
-                        accumulatedTime += headlineTime;
-                    }
-
-                    item.paragraphs.forEach(p => {
-                        const words = p.split(/(?<=[။၊\.\,])/); let currentChunk = ""; let chunks = [];
-                        words.forEach(w => {
-                            if(currentChunk.length + w.length > 150) { if(currentChunk) chunks.push(currentChunk.trim()); currentChunk = w; } 
-                            else { currentChunk += w; }
-                        });
-                        if(currentChunk) chunks.push(currentChunk.trim());
-                        const pTimeTotal = (p.length / totalChars) * item.duration; const timePerChar = pTimeTotal / p.length;
-                        chunks.forEach(c => {
-                            const chunkTime = c.length * timePerChar;
-                            item.subtitles.push({ text: c, start: accumulatedTime, end: accumulatedTime + chunkTime });
-                            accumulatedTime += chunkTime;
-                        });
-                    });
-                }
-            }
-            document.getElementById('timeTotal').innerText = formatTime(totalDuration);
-        }
-
-        function initAudioAnalyzer() {
-            if(!audioContext) {
-                try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    analyzer = audioContext.createAnalyser(); analyzer.fftSize = 256;
-                    const source = audioContext.createMediaElementSource(audioPlayer);
-                    source.connect(analyzer); analyzer.connect(audioContext.destination);
-                    dataArray = new Uint8Array(analyzer.frequencyBinCount);
-                } catch (e) { console.error("Audio Context Init Error:", e); }
-            }
-        }
-
-        // AUTO-SKIP AND ERROR HANDLING FUNCTION FOR NEXT AUDIO
-        function playNextAudio() {
-            if (currentNewsIndex < newsItems.length) { 
-                audioPlayer.src = newsItems[currentNewsIndex].audioUrl; 
-                audioPlayer.play().then(() => { 
-                    isPlaying = true; 
-                }).catch(e => {
-                    console.error("Audio Playback Error, skipping to next:", e);
-                    currentNewsIndex++;
-                    playNextAudio(); // Skip to next item safely
-                });
-            } else { 
-                stopPlayback(); 
-                if(isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); 
-            }
-        }
-
-        btnPlayOnly.addEventListener('click', async () => {
-            if (!newsItems.length || isRecording) return;
-            try {
-                if (!audioContext) initAudioAnalyzer();
-                if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
-            } catch(e) { }
-
-            if (isPlaying) {
-                audioPlayer.pause(); isPlaying = false; playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play"; cancelAnimationFrame(animationFrameId);
-            } else {
-                isRecording = false; btnPlayAndRecord.disabled = true;
-                if (audioPlayer.currentTime === 0 && currentNewsIndex === 0 && (!audioPlayer.src || audioPlayer.src === window.location.href)) {
-                    audioPlayer.src = newsItems[currentNewsIndex].audioUrl;
-                }
-                audioPlayer.play().then(() => {
-                    isPlaying = true; playIcon.classList.replace('fa-play', 'fa-pause'); playText.innerText = "Pause"; renderLoop();
-                }).catch(e => {
-                    console.error("First Playback Error:", e);
-                    currentNewsIndex++;
-                    playNextAudio();
-                    renderLoop();
-                });
-            }
-        });
-
-        btnStop.addEventListener('click', () => {
-            if (!newsItems.length) return;
-            stopPlayback();
-            if(isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-            playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play";
-            btnPlayOnly.disabled = false; btnPlayAndRecord.disabled = false; isRecording = false; document.getElementById('recordingStatus').classList.add('hidden');
-        });
-
-        let isDragging = false;
-        progressTrack.addEventListener('mousedown', (e) => { isDragging = true; seekAudio(e); }); window.addEventListener('mouseup', () => isDragging = false);
-        progressTrack.addEventListener('mousemove', (e) => { if (isDragging) seekAudio(e); }); progressTrack.addEventListener('touchstart', (e) => { isDragging = true; seekAudio(e.touches[0]); });
-        window.addEventListener('touchend', () => isDragging = false); progressTrack.addEventListener('touchmove', (e) => { if (isDragging) seekAudio(e.touches[0]); });
-
-        function seekAudio(e) {
-            if (!newsItems.length || totalDuration === 0 || isRecording) return; 
-            const rect = progressTrack.getBoundingClientRect();
-            let clickX = e.clientX - rect.left; if (clickX < 0) clickX = 0; if (clickX > rect.width) clickX = rect.width;
-            const targetTime = (clickX / rect.width) * totalDuration;
-            
-            let accumulated = 0; let targetIndex = 0; let localTime = 0;
-            for (let i = 0; i < newsItems.length; i++) {
-                if (targetTime <= accumulated + newsItems[i].duration) { targetIndex = i; localTime = targetTime - accumulated; break; }
-                accumulated += newsItems[i].duration;
-            }
-
-            const wasPlaying = isPlaying;
-            if (targetIndex !== currentNewsIndex) { currentNewsIndex = targetIndex; audioPlayer.src = newsItems[currentNewsIndex].audioUrl; }
-            if (audioPlayer.readyState >= 1) { audioPlayer.currentTime = localTime; } else {
-                const onLoaded = function() { audioPlayer.currentTime = localTime; audioPlayer.removeEventListener('loadedmetadata', onLoaded); };
-                audioPlayer.addEventListener('loadedmetadata', onLoaded);
-            }
-            if (wasPlaying && audioPlayer.paused) { audioPlayer.play().catch(e => console.log(e)); }
-            
-            drawCanvasFrame(performance.now() / 1000, localTime, 0);
-            document.getElementById('timeCurrent').innerText = formatTime(targetTime);
-            document.getElementById('playbackProgress').style.width = `${(targetTime / totalDuration) * 100}%`;
-        }
-
-        btnPlayAndRecord.addEventListener('click', async () => {
-            if (!newsItems.length || isRecording) return;
-            try {
-                if (!audioContext) initAudioAnalyzer();
-                if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
-            } catch(e){}
-
-            const resHeight = parseInt(resolutionSelect.value); const resWidth = Math.floor(resHeight * (9/16)); 
-            document.getElementById('videoCanvas').width = resWidth; document.getElementById('videoCanvas').height = resHeight;
-
-            isRecording = true; recordedChunks = []; btnPlayOnly.disabled = true; btnPlayAndRecord.disabled = true; 
-            document.getElementById('recordingStatus').classList.remove('hidden'); document.getElementById('recordingText').innerText = '● Recording Broadcast';
-            
-            try {
-                let combinedStream; const canvasStream = document.getElementById('videoCanvas').captureStream(30);
-                if (audioContext && analyzer) {
-                    const dest = audioContext.createMediaStreamDestination(); analyzer.connect(dest); 
-                    combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
-                } else { combinedStream = canvasStream; }
-                
-                let options = { mimeType: 'video/webm; codecs=vp8,opus' };
-                if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.424028, mp4a.40.2"')) { options = { mimeType: 'video/mp4; codecs="avc1.424028, mp4a.40.2"' }; } 
-                else if (MediaRecorder.isTypeSupported('video/mp4')) { options = { mimeType: 'video/mp4' }; }
-
-                mediaRecorder = new MediaRecorder(combinedStream, options);
-                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                mediaRecorder.onstop = () => {
-                    const format = options.mimeType.includes('mp4') ? 'mp4' : 'mp4'; 
-                    const blob = new Blob(recordedChunks, { type: options.mimeType });
-                    const url = URL.createObjectURL(blob); const a = document.createElement('a'); document.body.appendChild(a); a.style = 'display: none'; a.href = url;
-                    
-                    const fileNamePre = currentAppMode === 'ghost' ? 'D_Ghost' : 'D_News';
-                    a.download = `${fileNamePre}_${languageSelect.value}_${new Date().getTime()}.${format}`; a.click(); window.URL.revokeObjectURL(url);
-                    
-                    document.getElementById('recordingStatus').classList.add('hidden'); btnPlayAndRecord.disabled = false; btnPlayOnly.disabled = false;
-                    playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play"; isRecording = false; 
-                    document.getElementById('videoCanvas').width = 720; document.getElementById('videoCanvas').height = 1280; drawCanvasFrame(0);
-                };
-
-                mediaRecorder.start(); currentNewsIndex = 0; 
-                isPlaying = true;
-                renderLoop();
-                playNextAudio(); // Use robust play handler
-            } catch (err) { 
-                showErrorLog("Recording Error: Your browser may not support canvas capturing.");
-                document.getElementById('recordingStatus').classList.add('hidden'); isRecording = false; btnPlayAndRecord.disabled = false; btnPlayOnly.disabled = false;
-            }
-        });
-
-        // Event Listeners for robust playback
-        audioPlayer.onended = () => {
-            currentNewsIndex++; 
-            playNextAudio();
+                reader.readAsDataURL(file);
+            });
         };
 
-        audioPlayer.onerror = () => {
-            console.error("Audio playback error encountered.");
-            currentNewsIndex++;
-            playNextAudio();
+        window.removeBikeImage = (bikeId, imgIdx) => {
+            if(confirm("Are you sure you want to remove this image?")) {
+                const bike = appData.fleet.find(x => x.id === bikeId);
+                if (bike && bike.images) {
+                    bike.images.splice(imgIdx, 1);
+                    renderAdminFleet();
+                }
+            }
         };
 
-        function stopPlayback() {
-            audioPlayer.pause(); isPlaying = false; audioPlayer.currentTime = 0; cancelAnimationFrame(animationFrameId);
-            document.getElementById('playbackProgress').style.width = '0%'; document.getElementById('timeCurrent').innerText = "00:00";
-            if(!isRecording) { playIcon.classList.replace('fa-pause', 'fa-play'); playText.innerText = "Play"; btnPlayOnly.disabled = false; btnPlayAndRecord.disabled = false; }
-            if (newsItems.length > 0) drawCanvasFrame(0);
-        }
 
-        function renderLoop() {
-            if (!isPlaying) return; let volume = 0;
-            if (analyzer && dataArray) {
-                analyzer.getByteFrequencyData(dataArray); let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i]; volume = sum / dataArray.length; 
+        // Fleet Editor Interactions (Attached to Window so inline onclick works)
+        window.updateBikeField = (id, field, val) => { const b = appData.fleet.find(x => x.id === id); if(b) b[field] = val; };
+        window.updateBikeImages = (id, val) => { const b = appData.fleet.find(x => x.id === id); if(b) b.images = val.split('\n').map(s=>s.trim()).filter(s=>s!==''); };
+        window.updatePriceLabel = (bikeId, pIdx, val) => { appData.fleet.find(x => x.id === bikeId).prices[pIdx].label = val; };
+        window.updatePriceValue = (bikeId, pIdx, val) => { appData.fleet.find(x => x.id === bikeId).prices[pIdx].val = val; };
+        
+        window.addPrice = (bikeId) => {
+            appData.fleet.find(x => x.id === bikeId).prices.push({ label: "New Label", val: "New Value" });
+            renderAdminFleet();
+        };
+        window.removePrice = (bikeId, pIdx) => {
+            appData.fleet.find(x => x.id === bikeId).prices.splice(pIdx, 1);
+            renderAdminFleet();
+        };
+        window.deleteBike = (bikeId) => {
+            if(confirm("Are you sure you want to delete this bike?")) {
+                appData.fleet = appData.fleet.filter(x => x.id !== bikeId);
+                renderAdminFleet();
             }
-            drawCanvasFrame(performance.now() / 1000, audioPlayer.currentTime, volume);
-            let overallTime = 0; for(let i=0; i<currentNewsIndex; i++) overallTime += (newsItems[i].duration || 0); overallTime += audioPlayer.currentTime;
-            document.getElementById('timeCurrent').innerText = formatTime(overallTime); document.getElementById('playbackProgress').style.width = `${(overallTime / totalDuration) * 100}%`;
-            animationFrameId = requestAnimationFrame(renderLoop);
-        }
+        };
+        
+        document.getElementById('btn-add-bike').addEventListener('click', () => {
+            appData.fleet.unshift({
+                id: Date.now(),
+                title: "New Bike Name", subtitle: "Engine / Detail", badge: "",
+                images: [], // Start with empty images array
+                prices: [{label: "1 Day", val: "0 Baht"}]
+            });
+            renderAdminFleet();
+        });
 
-        function drawCanvasFrame(timeInSeconds, currentAudioTime = 0, volume = 0) {
-            const width = document.getElementById('videoCanvas').width; const height = document.getElementById('videoCanvas').height; const item = newsItems[currentNewsIndex];
-            canvasContext.clearRect(0, 0, width, height);
+        // Save All Changes
+        document.getElementById('btn-save-all').addEventListener('click', () => {
+            // Grab inputs
+            appData.links.fb = document.getElementById('inp-fb').value;
+            appData.links.wa = document.getElementById('inp-wa').value;
+            appData.links.line = document.getElementById('inp-line').value;
+            appData.links.wechat = document.getElementById('inp-wechat').value;
+            appData.links.kakao = document.getElementById('inp-kakao').value;
+            appData.links.ig = document.getElementById('inp-ig').value;
+            appData.links.mapChangklan = document.getElementById('inp-map-changklan').value;
+            appData.links.mapNimman = document.getElementById('inp-map-nimman').value;
             
-            // BACKGROUND RENDERING
-            if (anchorImageObj) {
-                const scale = Math.max(width / anchorImageObj.width, height / anchorImageObj.height); 
-                const finalScale = scale * (1 + (Math.sin(timeInSeconds * 0.1) * 0.015)); 
-                const volumeYShift = currentAppMode === 'ghost' ? (volume / 255) * 2 : (volume / 255) * 4; 
-                
-                const scaledWidth = anchorImageObj.width * finalScale; const scaledHeight = anchorImageObj.height * finalScale;
-                const offsetX = (width - scaledWidth) / 2; const offsetY = (height - scaledHeight) / 2 + volumeYShift;
-                canvasContext.drawImage(anchorImageObj, offsetX, offsetY, scaledWidth, scaledHeight);
-                
-                if(currentAppMode === 'ghost') {
-                    canvasContext.fillStyle = 'rgba(0,0,0,0.2)'; canvasContext.fillRect(0,0,width,height);
-                }
+            appData.contact.address = document.getElementById('inp-address').value;
+            appData.contact.email = document.getElementById('inp-email').value;
+
+            // Save to LocalStorage
+            localStorage.setItem('d2bike_appData', JSON.stringify(appData));
+            
+            // Re-render Public View
+            renderPublicView();
+
+            // Show Toast
+            const toast = document.getElementById('toast');
+            toast.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => toast.classList.add('opacity-0', 'translate-y-10'), 3000);
+        });
+
+        // ==========================================
+        // 4. INITIALIZATION & UI EXTRAS
+        // ==========================================
+        
+        // Initial Render
+        renderPublicView();
+
+        // Standard AOS Init
+        AOS.init({ duration: 900, easing: 'ease-out-quart', once: false, mirror: true, offset: 100 });
+
+        // Mobile Menu Toggle
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        btn.addEventListener('click', () => menu.classList.toggle('hidden'));
+        menu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => menu.classList.add('hidden')));
+
+        // Navbar blur effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 20) {
+                navbar.classList.add('shadow-md', 'bg-luxe-bg/95'); navbar.classList.remove('bg-luxe-bg/90', 'shadow-sm');
             } else {
-                const bgGradient = canvasContext.createRadialGradient(width/2, height/2, width*0.1, width/2, height/2, height);
-                bgGradient.addColorStop(0, currentAppMode === 'ghost' ? '#450a0a' : '#7f1d1d'); 
-                bgGradient.addColorStop(1, '#020617'); canvasContext.fillStyle = bgGradient; canvasContext.fillRect(0,0,width,height);
-                
-                canvasContext.strokeStyle = 'rgba(255, 255, 255, 0.05)'; canvasContext.lineWidth = 1.5;
-                const offset = (timeInSeconds * (currentAppMode === 'ghost' ? 10 : 15)) % 50;
-                for(let i=-50; i<width; i+=50) { canvasContext.beginPath(); canvasContext.moveTo(i + offset,0); canvasContext.lineTo(i + offset,height); canvasContext.stroke(); }
-                for(let i=0; i<height; i+=50) { canvasContext.beginPath(); canvasContext.moveTo(0,i); canvasContext.lineTo(width,i); canvasContext.stroke(); }
+                navbar.classList.add('bg-luxe-bg/90', 'shadow-sm'); navbar.classList.remove('shadow-md', 'bg-luxe-bg/95');
             }
+        });
 
-            // LOGO BOX
-            const logoX = width * 0.05; const logoY = height * 0.04; const logoBoxH = height * 0.045; const logoBoxW = logoBoxH * 1.2;
-            canvasContext.shadowColor = 'rgba(0,0,0,0.5)'; canvasContext.shadowBlur = 8;
-            canvasContext.fillStyle = '#cc0000'; canvasContext.fillRect(logoX, logoY, logoBoxW, logoBoxH);
-            canvasContext.fillStyle = 'white'; canvasContext.font = `900 ${logoBoxH * 0.8}px Montserrat, sans-serif`; canvasContext.textAlign = 'center'; canvasContext.textBaseline = 'middle'; 
-            canvasContext.fillText("D", logoX + (logoBoxW/2), logoY + (logoBoxH/2) + 2);
-            
-            canvasContext.textAlign = 'left'; 
-            const logoText = currentAppMode === 'ghost' ? "GHOST STORIES" : "NEWS";
-            canvasContext.font = `900 ${currentAppMode === 'ghost' ? logoBoxH * 0.65 : logoBoxH * 0.8}px Montserrat, sans-serif`; 
-            canvasContext.fillText(logoText, logoX + logoBoxW + 6, logoY + (logoBoxH/2) + 2); 
-            canvasContext.shadowBlur = 0;
+        // FAB Logic
+        const fabWrapper = document.getElementById('fab-wrapper');
+        const fabMainBtn = document.getElementById('fab-main');
+        fabMainBtn.addEventListener('click', (e) => { e.preventDefault(); fabWrapper.classList.toggle('is-open'); });
+        window.addEventListener('scroll', () => { if (fabWrapper.classList.contains('is-open')) fabWrapper.classList.remove('is-open'); });
+        document.addEventListener('click', (e) => { if (!fabWrapper.contains(e.target) && fabWrapper.classList.contains('is-open')) fabWrapper.classList.remove('is-open'); });
 
-            // TEXT BACKGROUND GRADIENT
-            const textBgHeight = height * 0.45, textBgY = height - textBgHeight;
-            const textBgGradient = canvasContext.createLinearGradient(0, textBgY, 0, height);
-            textBgGradient.addColorStop(0, 'rgba(0, 0, 0, 0)'); textBgGradient.addColorStop(0.2, 'rgba(0, 0, 0, 0.9)'); textBgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
-            canvasContext.fillStyle = textBgGradient; canvasContext.fillRect(0, textBgY, width, textBgHeight);
-
-            // AUDIO VISUALIZER
-            if (dataArray && isPlaying) {
-                const barWidth = width / 30; canvasContext.fillStyle = currentAppMode === 'ghost' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.4)'; 
-                for(let i=0; i<30; i++) {
-                    const barHeight = (dataArray[i*2] || 0) * 0.6; canvasContext.fillRect(i * barWidth, textBgY + (height*0.1) - barHeight, barWidth - 2, barHeight);
-                }
-            }
-
-            // CONTENT TEXT
-            if (item) {
-                let subText = "";
-                if (item.subtitles) { for (let sub of item.subtitles) { if (currentAudioTime >= sub.start && currentAudioTime <= sub.end) { subText = sub.text; break; } } }
-                const contentX = width * 0.06, maxWidth = width * 0.88;
-                
-                canvasContext.textAlign = 'left'; 
-                const isBurmese = languageSelect.value === 'Burmese';
-                const hlFontSize = isBurmese ? height * 0.032 : height * 0.028; 
-                canvasContext.textBaseline = 'top';
-                let subY = textBgY + (height * 0.15);
-
-                if (currentAppMode === 'ghost') {
-                    // Draw Main Story Headline for Ghost
-                    canvasContext.fillStyle = '#cc0000'; 
-                    const catStr = item.category ? item.category.toUpperCase() : "HORROR";
-                    canvasContext.font = `bold ${height * 0.018}px sans-serif`;
-                    const catW = canvasContext.measureText(catStr).width + 24, catH = height * 0.035, catY = textBgY + (height * 0.1);
-                    canvasContext.fillRect(contentX, catY, catW, catH);
-                    canvasContext.fillStyle = 'white'; canvasContext.textBaseline = 'middle';
-                    canvasContext.fillText(catStr, contentX + 12, catY + (catH/2) + 2);
-
-                    canvasContext.textBaseline = 'top';
-                    canvasContext.fillStyle = '#ffffff';
-                    canvasContext.font = `bold ${hlFontSize}px Padauk, sans-serif`; 
-                    subY = wrapTextWordBoundary(canvasContext, mainStoryHeadline, contentX, catY + catH + 15, maxWidth, hlFontSize * 1.4);
-                } else {
-                    // Draw Category and specific News Headline
-                    canvasContext.fillStyle = '#cc0000'; 
-                    const catStr = item.category ? item.category.toUpperCase() : "BREAKING";
-                    canvasContext.font = `bold ${height * 0.018}px sans-serif`;
-                    const catW = canvasContext.measureText(catStr).width + 24, catH = height * 0.035, catY = textBgY + (height * 0.1);
-                    canvasContext.fillRect(contentX, catY, catW, catH);
-                    canvasContext.fillStyle = 'white'; canvasContext.textBaseline = 'middle';
-                    canvasContext.fillText(catStr, contentX + 12, catY + (catH/2) + 2);
-
-                    canvasContext.textBaseline = 'top';
-                    canvasContext.fillStyle = '#ffffff';
-                    canvasContext.font = `bold ${hlFontSize}px Padauk, sans-serif`; 
-                    subY = wrapTextWordBoundary(canvasContext, item.headline, contentX, catY + catH + 15, maxWidth, hlFontSize * 1.4);
-                }
-                
-                // Draw Subtitles
-                canvasContext.fillStyle = '#e2e8f0'; const subFontSize = isBurmese ? height * 0.026 : height * 0.022; canvasContext.font = `bold ${subFontSize}px Padauk, sans-serif`;
-                wrapTextWordBoundary(canvasContext, subText, contentX, subY + 20, maxWidth, subFontSize * 1.5);
-            }
-        }
-
-        function wrapTextWordBoundary(ctx, text, x, y, maxWidth, lineHeight) {
-            if(!text) return y; let segments = [];
-            if (window.Intl && Intl.Segmenter) { const segmenter = new Intl.Segmenter('my', { granularity: 'word' }); segments = Array.from(segmenter.segment(text)).map(s => s.segment); } 
-            else { segments = text.split(/(?=[ \n])|(?<=[ \n])/); }
-            
-            let line = '', currentY = y;
-            for (let n = 0; n < segments.length; n++) {
-                let testLine = line + segments[n]; let metrics = ctx.measureText(testLine);
-                if (metrics.width > maxWidth && n > 0 && line.trim() !== '') { ctx.fillText(line.trim(), x, currentY); line = segments[n]; currentY += lineHeight; } else { line = testLine; }
-            }
-            if (line.trim() !== '') ctx.fillText(line.trim(), x, currentY); 
-            return currentY + lineHeight;
-        }
-
-        function formatTime(seconds) {
-            if (isNaN(seconds) || seconds === Infinity || seconds < 0) return "00:00";
-            const m = Math.floor(seconds / 60), s = Math.floor(seconds % 60); return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
     </script>
 </body>
 </html>
