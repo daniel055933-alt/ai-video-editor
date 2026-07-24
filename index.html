@@ -3,7 +3,7 @@
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>D2 Bike - Premium Motorcycle Rental</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -43,8 +43,11 @@
         }
     </script>
     <style>
-        body { 
+        /* Force strictly hide horizontal overflow to prevent white gaps on mobile */
+        html, body { 
             overflow-x: hidden; 
+            width: 100%;
+            max-width: 100vw;
             background-color: #FBF9F1;
         }
 
@@ -75,12 +78,12 @@
 
         .fab-container.is-open .fab-item { pointer-events: auto; }
 
-        /* Start Positions */
-        .fab-item-1 { transform: translate(0, -300px) scale(0); }
-        .fab-item-2 { transform: translate(120px, -180px) scale(0); }
-        .fab-item-3 { transform: translate(-120px, -120px) scale(0); }
-        .fab-item-4 { transform: translate(120px, -60px) scale(0); }
-        .fab-item-5 { transform: translate(0, 20px) scale(0); }
+        /* Start Positions (Fixed to 0 so they don't cause horizontal screen overflow) */
+        .fab-item-1 { transform: translate(0, 0) scale(0); }
+        .fab-item-2 { transform: translate(0, 0) scale(0); }
+        .fab-item-3 { transform: translate(0, 0) scale(0); }
+        .fab-item-4 { transform: translate(0, 0) scale(0); }
+        .fab-item-5 { transform: translate(0, 0) scale(0); }
 
         /* Final Positions */
         .fab-container.is-open .fab-item-1 { transform: translate(0, -290px) scale(1); opacity: 1; transition-delay: 0.20s; }
@@ -105,8 +108,8 @@
 </head>
 <body class="font-sans text-luxe-dark antialiased selection:bg-luxe-gold selection:text-white">
 
-    <!-- PUBLIC WEBSITE WRAPPER -->
-    <div id="public-wrapper">
+    <!-- PUBLIC WEBSITE WRAPPER (Added w-full and overflow-x-hidden) -->
+    <div id="public-wrapper" class="w-full overflow-x-hidden relative">
         <!-- Navigation -->
         <nav class="bg-luxe-bg/90 backdrop-blur-md shadow-sm fixed w-full z-40 top-0 transition-all duration-300 border-b border-luxe-gold/20" id="navbar">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -144,20 +147,20 @@
             </div>
         </nav>
 
-        <!-- Hero Section with Dynamic Slideshow -->
-        <section id="home" class="relative h-[85vh] flex items-center justify-center pt-20 overflow-hidden bg-black">
+        <!-- Hero Section with Dynamic Slideshow (Added w-full) -->
+        <section id="home" class="relative w-full h-[85vh] flex items-center justify-center pt-20 overflow-hidden bg-black">
             <!-- Background Slider Container -->
-            <div id="hero-bg-slider" class="absolute inset-0 z-0 pointer-events-none">
+            <div id="hero-bg-slider" class="absolute inset-0 w-full h-full z-0 pointer-events-none">
                 <!-- Images injected here by JS -->
                 <!-- Dark gradient overlay for text readability -->
-                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70 z-10"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70 z-10 w-full h-full"></div>
             </div>
 
-            <div class="text-center px-4 max-w-4xl mx-auto z-20 relative">
-                <h1 data-aos="zoom-out" data-aos-delay="300" class="text-5xl md:text-7xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-2xl">
+            <div class="text-center px-4 max-w-4xl mx-auto z-20 relative w-full">
+                <h1 data-aos="zoom-out" data-aos-delay="300" class="text-5xl md:text-7xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-2xl px-2">
                     <span id="pub-hero-t1">Start Your Journey With</span> <br/><span id="pub-hero-t2" class="text-gradient-gold">The Best Bikes</span>
                 </h1>
-                <p id="pub-hero-desc" data-aos="fade-up" data-aos-delay="500" class="text-lg md:text-xl text-gray-200 font-light mb-10 max-w-2xl mx-auto drop-shadow-md">
+                <p id="pub-hero-desc" data-aos="fade-up" data-aos-delay="500" class="text-lg md:text-xl text-gray-200 font-light mb-10 max-w-2xl mx-auto drop-shadow-md px-4">
                     Experience the ultimate ride. Reliable, affordable, and high-quality motorcycles ready for your adventure.
                 </p>
                 <div data-aos="fade-up" data-aos-delay="700" class="flex flex-col sm:flex-row gap-6 justify-center items-center">
@@ -168,62 +171,62 @@
             </div>
         </section>
 
-        <!-- Fleet Section -->
-        <section id="fleet" class="py-24 bg-luxe-bg relative">
+        <!-- Fleet Section (Added w-full) -->
+        <section id="fleet" class="py-24 bg-luxe-bg relative w-full overflow-hidden">
             <div class="absolute top-0 right-0 w-64 h-64 bg-luxe-gold opacity-5 rounded-full blur-3xl"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-luxe-gold opacity-5 rounded-full blur-3xl"></div>
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
                 <div class="text-center mb-20" data-aos="fade-up">
                     <span class="text-luxe-red font-bold tracking-[0.2em] uppercase text-sm mb-2 block">Exclusive Models</span>
                     <h2 class="text-4xl md:text-5xl font-serif font-bold text-luxe-dark mt-2 mb-6">Rental Rates & Models</h2>
                     <div class="w-20 h-1 bg-luxe-gold mx-auto"></div>
                 </div>
                 <!-- Bikes Grid -->
-                <div id="fleet-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+                <div id="fleet-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 w-full">
                     <!-- Javascript will inject bikes here -->
                 </div>
             </div>
         </section>
 
-        <!-- Services -->
-        <section id="services" class="py-24 bg-luxe-dark relative overflow-hidden">
+        <!-- Services (Added w-full) -->
+        <section id="services" class="py-24 bg-luxe-dark relative overflow-hidden w-full">
             <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, #C5A059 0, #C5A059 1px, transparent 0, transparent 50%); background-size: 40px 40px;"></div>
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
                 <div class="text-center mb-20" data-aos="fade-down">
                     <span class="text-luxe-gold font-semibold tracking-[0.2em] uppercase text-sm mb-2 block">The D2 Difference</span>
                     <h2 class="text-3xl md:text-5xl font-serif font-bold text-white mt-2 mb-6">Uncompromising Quality</h2>
                     <div class="w-20 h-1 bg-luxe-red mx-auto"></div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 w-full">
                     <div data-aos="slide-up" data-aos-delay="100" class="text-center group">
                         <div class="w-20 h-20 bg-luxe-gold/10 border border-luxe-gold/30 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:bg-luxe-gold transition-colors duration-300">
                             <i class="fa-solid fa-wrench text-3xl text-luxe-gold group-hover:text-luxe-dark transition-colors"></i>
                         </div>
                         <h3 class="text-xl font-serif font-bold text-white mb-4">Impeccable Maintenance</h3>
-                        <p class="text-gray-400 font-light leading-relaxed group-hover:text-white transition-colors">Every motorcycle undergoes rigorous inspection and detailing prior to each rental to ensure safety and performance.</p>
+                        <p class="text-gray-400 font-light leading-relaxed group-hover:text-white transition-colors px-2">Every motorcycle undergoes rigorous inspection and detailing prior to each rental to ensure safety and performance.</p>
                     </div>
                     <div data-aos="zoom-in" data-aos-delay="200" class="text-center group">
                         <div class="w-20 h-20 bg-luxe-gold/10 border border-luxe-gold/30 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:bg-luxe-gold transition-colors duration-300">
                             <i class="fa-solid fa-helmet-safety text-3xl text-luxe-gold group-hover:text-luxe-dark transition-colors"></i>
                         </div>
                         <h3 class="text-xl font-serif font-bold text-white mb-4">Premium Gear</h3>
-                        <p class="text-gray-400 font-light leading-relaxed group-hover:text-white transition-colors">We provide helmets complimentary for your safety and comfort.</p>
+                        <p class="text-gray-400 font-light leading-relaxed group-hover:text-white transition-colors px-2">We provide helmets complimentary for your safety and comfort.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Locations -->
-        <section id="locations" class="py-24 bg-luxe-bg relative border-b border-luxe-gold/20">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <!-- Locations (Added w-full) -->
+        <section id="locations" class="py-24 bg-luxe-bg relative border-b border-luxe-gold/20 w-full overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
                 <div class="text-center mb-16" data-aos="fade-down">
                     <span class="text-luxe-red font-bold tracking-[0.2em] uppercase text-sm mb-2 block">Visit Us</span>
                     <h2 class="text-3xl md:text-5xl font-serif font-bold text-luxe-dark mt-2 mb-6">Our Locations</h2>
                     <div class="w-20 h-1 bg-luxe-gold mx-auto"></div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-10" id="locations-container">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 w-full" id="locations-container">
                     <!-- Map 1 -->
-                    <div data-aos="fade-right" data-aos-delay="100" class="bg-luxe-card p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 flex flex-col group hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-shadow duration-300">
+                    <div data-aos="fade-right" data-aos-delay="100" class="bg-luxe-card p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 flex flex-col group hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-shadow duration-300 w-full">
                         <div class="flex items-center justify-center gap-3 mb-6">
                             <i class="fa-solid fa-location-dot text-luxe-red text-xl"></i>
                             <h3 class="text-2xl font-serif font-bold text-luxe-dark">D2 Bike Changklan</h3>
@@ -231,12 +234,12 @@
                         <div class="w-full h-80 rounded-xl overflow-hidden border border-gray-200">
                             <iframe src="https://maps.google.com/maps?q=D2%20Bike%20Changklan&t=&z=15&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                         </div>
-                        <a id="link-changklan" href="https://maps.app.goo.gl/9aBdzGDwHWFh6Vxj7" target="_blank" class="mt-6 block text-center bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white py-4 rounded-lg uppercase tracking-widest text-sm font-semibold transition-colors duration-300 flex items-center justify-center gap-2">
+                        <a id="link-changklan" href="https://maps.app.goo.gl/9aBdzGDwHWFh6Vxj7" target="_blank" class="mt-6 block text-center w-full bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white py-4 rounded-lg uppercase tracking-widest text-sm font-semibold transition-colors duration-300 flex items-center justify-center gap-2">
                             <i class="fa-solid fa-map-location-dot"></i> Get Directions
                         </a>
                     </div>
                     <!-- Map 2 -->
-                    <div data-aos="fade-left" data-aos-delay="200" class="bg-luxe-card p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 flex flex-col group hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-shadow duration-300">
+                    <div data-aos="fade-left" data-aos-delay="200" class="bg-luxe-card p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 flex flex-col group hover:shadow-[0_8px_30px_rgba(197,160,89,0.15)] transition-shadow duration-300 w-full">
                         <div class="flex items-center justify-center gap-3 mb-6">
                             <i class="fa-solid fa-location-dot text-luxe-red text-xl"></i>
                             <h3 class="text-2xl font-serif font-bold text-luxe-dark">D2 Bike Nimman</h3>
@@ -244,7 +247,7 @@
                         <div class="w-full h-80 rounded-xl overflow-hidden border border-gray-200">
                             <iframe src="https://maps.google.com/maps?q=D2%20Bike%20Nimman&t=&z=15&ie=UTF8&iwloc=&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                         </div>
-                        <a id="link-nimman" href="https://maps.app.goo.gl/QLz5bGJE1W7AotJx8" target="_blank" class="mt-6 block text-center bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white py-4 rounded-lg uppercase tracking-widest text-sm font-semibold transition-colors duration-300 flex items-center justify-center gap-2">
+                        <a id="link-nimman" href="https://maps.app.goo.gl/QLz5bGJE1W7AotJx8" target="_blank" class="mt-6 block text-center w-full bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white py-4 rounded-lg uppercase tracking-widest text-sm font-semibold transition-colors duration-300 flex items-center justify-center gap-2">
                             <i class="fa-solid fa-map-location-dot"></i> Get Directions
                         </a>
                     </div>
@@ -252,10 +255,10 @@
             </div>
         </section>
 
-        <!-- Footer -->
-        <footer id="contact" class="bg-[#050505] pt-20 pb-10">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+        <!-- Footer (Added w-full) -->
+        <footer id="contact" class="bg-[#050505] pt-20 pb-10 w-full overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16 w-full">
                     <div class="col-span-1 md:col-span-1" data-aos="fade-right" data-aos-delay="100">
                         <a href="#" class="block hover:scale-105 transition-transform duration-300 w-fit mb-6">
                             <div class="flex flex-col items-end bg-[#FCEE21] px-3 py-1 rounded shadow-md border border-yellow-400/50">
@@ -282,18 +285,18 @@
                     <div class="col-span-1 md:col-span-2" data-aos="fade-left" data-aos-delay="300">
                         <h4 class="text-sm font-bold uppercase tracking-widest text-luxe-gold mb-6">Contact Us</h4>
                         <div class="space-y-6">
-                            <div class="flex items-start gap-4 group cursor-pointer">
-                                <i class="fa-solid fa-location-dot text-luxe-gold mt-1 group-hover:text-luxe-red transition-colors"></i>
-                                <p id="text-address" class="text-gray-400 font-light group-hover:text-white transition-colors">Changklan & Nimman, Chiang Mai, Thailand.</p>
+                            <div class="flex items-start gap-4 group cursor-pointer w-full">
+                                <i class="fa-solid fa-location-dot text-luxe-gold mt-1 group-hover:text-luxe-red transition-colors flex-shrink-0"></i>
+                                <p id="text-address" class="text-gray-400 font-light group-hover:text-white transition-colors break-words w-full">Changklan & Nimman, Chiang Mai, Thailand.</p>
                             </div>
-                            <div class="flex items-center gap-4 group cursor-pointer">
-                                <i class="fa-solid fa-envelope text-luxe-gold group-hover:text-luxe-red transition-colors"></i>
-                                <p id="text-email" class="text-gray-400 font-light group-hover:text-white transition-colors">concierge@d2bikerental.com</p>
+                            <div class="flex items-center gap-4 group cursor-pointer w-full">
+                                <i class="fa-solid fa-envelope text-luxe-gold group-hover:text-luxe-red transition-colors flex-shrink-0"></i>
+                                <p id="text-email" class="text-gray-400 font-light group-hover:text-white transition-colors break-words w-full">concierge@d2bikerental.com</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4" data-aos="zoom-in" data-aos-delay="400">
+                <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 w-full" data-aos="zoom-in" data-aos-delay="400">
                     <p class="text-gray-500 font-light text-xs uppercase tracking-widest">
                         <!-- Secret Admin Trigger on the Copyright Symbol -->
                         <span id="admin-trigger" class="cursor-pointer hover:text-luxe-gold text-lg" title="Admin Login">&copy;</span> 2026 D2 Bike Rental. All rights reserved.
@@ -772,16 +775,16 @@
                 
                 card.innerHTML = `
                     ${badgeHtml}
-                    <div class="relative h-64 overflow-hidden bg-gray-100">
+                    <div class="relative h-64 overflow-hidden bg-gray-100 w-full">
                         <img id="img-${bike.id}" src="${displayImage}" alt="${bike.title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out">
                         ${controlsHtml}
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 w-full h-full"></div>
                     </div>
-                    <div class="p-8 flex-grow flex flex-col bg-luxe-card z-10 relative">
+                    <div class="p-8 flex-grow flex flex-col bg-luxe-card z-10 relative w-full">
                         <h3 class="text-2xl font-serif font-bold text-luxe-dark mb-1">${bike.title}</h3>
                         <p class="text-luxe-red font-medium text-sm mb-6 uppercase tracking-wider">${bike.subtitle}</p>
-                        <div class="flex-grow mb-8">
-                            <ul class="space-y-4 text-sm">${priceHtml}</ul>
+                        <div class="flex-grow mb-8 w-full">
+                            <ul class="space-y-4 text-sm w-full">${priceHtml}</ul>
                         </div>
                         <a href="#contact" class="mt-auto block text-center w-full bg-luxe-dark text-luxe-gold hover:bg-luxe-gold hover:text-white uppercase tracking-widest text-sm font-semibold py-4 rounded-lg transition-colors duration-300 shadow-md hover:shadow-lg">Book Now</a>
                     </div>
@@ -1290,6 +1293,7 @@
         
         renderPublicView();
 
+        // Use overflow-hidden to clip any AOS elements causing initial horizontal scroll
         AOS.init({ duration: 900, easing: 'ease-out-quart', once: false, mirror: true, offset: 100 });
 
         const btn = document.getElementById('mobile-menu-btn');
