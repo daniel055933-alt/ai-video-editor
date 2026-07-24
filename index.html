@@ -47,14 +47,6 @@
             overflow-x: hidden; 
             background-color: #FBF9F1;
         }
-        
-        /* Premium Hero Background with Dark Gradient Overlay for contrast */
-        .hero-bg {
-            background-image: linear-gradient(rgba(10, 10, 10, 0.7), rgba(10, 10, 10, 0.5)), url('https://images.unsplash.com/photo-1558981285-6f0c94958bb6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }
 
         .text-gradient-gold {
             background: linear-gradient(to right, #C5A059, #E6C972, #C5A059);
@@ -152,13 +144,20 @@
             </div>
         </nav>
 
-        <!-- Hero Section -->
-        <section id="home" class="hero-bg h-[85vh] flex items-center justify-center pt-20 relative overflow-hidden">
-            <div class="text-center px-4 max-w-4xl mx-auto z-10">
+        <!-- Hero Section with Dynamic Slideshow -->
+        <section id="home" class="relative h-[85vh] flex items-center justify-center pt-20 overflow-hidden bg-black">
+            <!-- Background Slider Container -->
+            <div id="hero-bg-slider" class="absolute inset-0 z-0 pointer-events-none">
+                <!-- Images injected here by JS -->
+                <!-- Dark gradient overlay for text readability -->
+                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70 z-10"></div>
+            </div>
+
+            <div class="text-center px-4 max-w-4xl mx-auto z-20 relative">
                 <h1 data-aos="zoom-out" data-aos-delay="300" class="text-5xl md:text-7xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-2xl">
-                    Start Your Journey With <br/><span class="text-gradient-gold">The Best Bikes</span>
+                    <span id="pub-hero-t1">Start Your Journey With</span> <br/><span id="pub-hero-t2" class="text-gradient-gold">The Best Bikes</span>
                 </h1>
-                <p data-aos="fade-up" data-aos-delay="500" class="text-lg md:text-xl text-gray-200 font-light mb-10 max-w-2xl mx-auto drop-shadow-md">
+                <p id="pub-hero-desc" data-aos="fade-up" data-aos-delay="500" class="text-lg md:text-xl text-gray-200 font-light mb-10 max-w-2xl mx-auto drop-shadow-md">
                     Experience the ultimate ride. Reliable, affordable, and high-quality motorcycles ready for your adventure.
                 </p>
                 <div data-aos="fade-up" data-aos-delay="700" class="flex flex-col sm:flex-row gap-6 justify-center items-center">
@@ -169,7 +168,7 @@
             </div>
         </section>
 
-        <!-- Fleet Section (Dynamically Rendered) -->
+        <!-- Fleet Section -->
         <section id="fleet" class="py-24 bg-luxe-bg relative">
             <div class="absolute top-0 right-0 w-64 h-64 bg-luxe-gold opacity-5 rounded-full blur-3xl"></div>
             <div class="absolute bottom-0 left-0 w-96 h-96 bg-luxe-gold opacity-5 rounded-full blur-3xl"></div>
@@ -396,7 +395,11 @@
                 
                 <!-- Sidebar / Mobile Top Nav -->
                 <div id="admin-sidebar" class="w-full sm:w-64 bg-admin-card border-b sm:border-b-0 sm:border-r border-gray-700 p-4 space-y-2 flex-shrink-0 absolute sm:relative z-10 hidden sm:block transform transition-transform duration-300 h-full overflow-y-auto admin-scroll">
-                    <button class="admin-tab active w-full text-left px-4 py-3 rounded bg-[#1e1e2f] text-admin-accent border border-admin-accent flex items-center gap-3 shadow-sm transition" data-target="tab-fleet">
+                    <!-- NEW HERO TAB -->
+                    <button class="admin-tab active w-full text-left px-4 py-3 rounded bg-[#1e1e2f] text-admin-accent border border-admin-accent flex items-center gap-3 shadow-sm transition" data-target="tab-hero">
+                        <i class="fa-solid fa-image w-5 text-center"></i> Hero Settings
+                    </button>
+                    <button class="admin-tab w-full text-left px-4 py-3 rounded text-gray-400 hover:bg-[#1e1e2f] hover:text-white flex items-center gap-3 transition" data-target="tab-fleet">
                         <i class="fa-solid fa-motorcycle w-5 text-center"></i> Fleet & Prices
                     </button>
                     <button class="admin-tab w-full text-left px-4 py-3 rounded text-gray-400 hover:bg-[#1e1e2f] hover:text-white flex items-center gap-3 transition" data-target="tab-links">
@@ -414,8 +417,48 @@
                 <!-- Editors Container -->
                 <div class="flex-1 p-4 sm:p-6 overflow-y-auto admin-scroll w-full">
                     
+                    <!-- TAB: HERO SETTINGS (NEW) -->
+                    <div id="tab-hero" class="admin-panel-content w-full max-w-5xl mx-auto">
+                        <h2 class="text-2xl font-bold mb-2">Hero Section Settings</h2>
+                        <p class="text-sm text-gray-400 mb-6">Change the top welcome texts and background images. Add multiple images for a slideshow effect.</p>
+                        
+                        <div class="bg-admin-card p-5 sm:p-6 rounded-xl border border-gray-700 space-y-6 shadow-lg mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-300 mb-1.5">Main Title (White Text)</label>
+                                    <input type="text" id="inp-hero-t1" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2.5 text-white focus:border-admin-accent outline-none transition" placeholder="e.g. Start Your Journey With">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-300 mb-1.5">Highlighted Title (Gold Text)</label>
+                                    <input type="text" id="inp-hero-t2" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2.5 text-white focus:border-admin-accent outline-none transition" placeholder="e.g. The Best Bikes">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-300 mb-1.5">Description Text</label>
+                                <textarea id="inp-hero-desc" rows="2" class="w-full bg-[#1e1e2f] border border-gray-600 rounded p-2.5 text-white focus:border-admin-accent outline-none transition" placeholder="Experience the ultimate ride..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="bg-admin-card p-5 sm:p-6 rounded-xl border border-gray-700 shadow-lg">
+                            <label class="block text-sm font-semibold text-gray-300 mb-1.5">Hero Background Images (Slideshow)</label>
+                            <p class="text-xs text-gray-400 mb-4">Upload one or more images. If multiple images are uploaded, they will automatically crossfade.</p>
+                            
+                            <div class="flex flex-wrap gap-4 items-center" id="hero-images-container">
+                                <!-- Images injected here by JS -->
+                            </div>
+                            
+                            <!-- Upload Button for Hero -->
+                            <div class="mt-4">
+                                <label class="inline-flex items-center gap-2 bg-[#1e1e2f] border border-gray-600 hover:border-admin-accent hover:text-admin-accent px-4 py-2 rounded cursor-pointer transition text-sm">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload Image(s)
+                                    <input type="file" accept="image/*" multiple class="hidden" onchange="handleHeroImageUpload(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- TAB: FLEET -->
-                    <div id="tab-fleet" class="admin-panel-content w-full max-w-5xl mx-auto">
+                    <div id="tab-fleet" class="admin-panel-content hidden w-full max-w-5xl mx-auto">
                         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                             <div>
                                 <h2 class="text-2xl font-bold">Manage Fleet</h2>
@@ -549,6 +592,12 @@
             users: [
                 { id: 1, username: 'Admin', password: '1234' }
             ],
+            hero: {
+                title1: "Start Your Journey With",
+                title2: "The Best Bikes",
+                desc: "Experience the ultimate ride. Reliable, affordable, and high-quality motorcycles ready for your adventure.",
+                images: ["https://images.unsplash.com/photo-1558981285-6f0c94958bb6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"]
+            },
             contact: {
                 address: "Changklan & Nimman, Chiang Mai, Thailand.",
                 email: "concierge@d2bikerental.com"
@@ -577,12 +626,17 @@
         // Load from local storage or use defaults
         let appData = JSON.parse(localStorage.getItem('d2bike_appData')) || defaultData;
         
-        // If users array doesn't exist in old cached data, create it
+        // Data Migration check
         if(!appData.users) appData.users = defaultData.users;
+        if(!appData.hero) appData.hero = defaultData.hero;
 
         let currentLoggedInUser = null;
         const currentImageIndices = {};
         const autoSlideTimers = {};
+        
+        // Hero Background slideshow state
+        let currentHeroSlideIndex = 0;
+        let heroBgInterval = null;
 
         // Custom Confirm Logic
         let confirmActionCallback = null;
@@ -621,6 +675,53 @@
         // 2. PUBLIC VIEW RENDERING
         // ==========================================
         function renderPublicView() {
+            // Update Hero Text
+            document.getElementById('pub-hero-t1').innerText = appData.hero.title1;
+            document.getElementById('pub-hero-t2').innerText = appData.hero.title2;
+            document.getElementById('pub-hero-desc').innerText = appData.hero.desc;
+
+            // Render Hero Background Images (Slideshow)
+            const heroBgSlider = document.getElementById('hero-bg-slider');
+            // Remove old images, keep the overlay
+            heroBgSlider.querySelectorAll('.hero-bg-img').forEach(el => el.remove());
+            clearInterval(heroBgInterval);
+
+            if(appData.hero.images.length > 0) {
+                appData.hero.images.forEach((imgSrc, idx) => {
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+                    // Initial state: first image visible, others hidden
+                    img.className = `hero-bg-img absolute inset-0 w-full h-full object-cover transition-opacity duration-[1500ms] ease-in-out ${idx === 0 ? 'opacity-100' : 'opacity-0'}`;
+                    img.id = `hero-slide-${idx}`;
+                    // Insert before the overlay div
+                    heroBgSlider.insertBefore(img, heroBgSlider.firstChild);
+                });
+
+                // Start Slideshow if more than 1 image
+                if(appData.hero.images.length > 1) {
+                    currentHeroSlideIndex = 0;
+                    heroBgInterval = setInterval(() => {
+                        // fade out current
+                        const currentSlide = document.getElementById(`hero-slide-${currentHeroSlideIndex}`);
+                        if(currentSlide) {
+                            currentSlide.classList.remove('opacity-100');
+                            currentSlide.classList.add('opacity-0');
+                        }
+                        
+                        // calc next
+                        currentHeroSlideIndex = (currentHeroSlideIndex + 1) % appData.hero.images.length;
+                        
+                        // fade in next
+                        const nextSlide = document.getElementById(`hero-slide-${currentHeroSlideIndex}`);
+                        if(nextSlide) {
+                            nextSlide.classList.remove('opacity-0');
+                            nextSlide.classList.add('opacity-100');
+                        }
+                    }, 4000); // 4 seconds per slide
+                }
+            }
+
+            // Update Texts & Links
             document.getElementById('text-address').textContent = appData.contact.address;
             document.getElementById('text-email').textContent = appData.contact.email;
             
@@ -630,8 +731,10 @@
             document.getElementById('fab-wechat').href = appData.links.wechat;
             document.getElementById('fab-kakao').href = appData.links.kakao;
 
+            // Clear previous timers for Fleet
             Object.values(autoSlideTimers).forEach(timer => clearInterval(timer));
 
+            // Render Fleet
             const fleetContainer = document.getElementById('fleet-container');
             fleetContainer.innerHTML = ''; 
 
@@ -757,7 +860,7 @@
             currentLoggedInUser = null;
             adminModal.classList.add('hidden'); adminModal.classList.remove('flex');
             dashView.classList.add('hidden'); dashView.classList.remove('flex');
-            document.getElementById('tab-fleet').click(); // Reset tab visually
+            document.getElementById('tab-hero').click(); // Reset tab visually to default
         });
 
         document.getElementById('admin-menu-toggle').addEventListener('click', () => {
@@ -783,6 +886,12 @@
         });
 
         function populateAdminForms() {
+            // Hero
+            document.getElementById('inp-hero-t1').value = appData.hero.title1;
+            document.getElementById('inp-hero-t2').value = appData.hero.title2;
+            document.getElementById('inp-hero-desc').value = appData.hero.desc;
+            renderHeroImages();
+
             // Links
             document.getElementById('inp-fb').value = appData.links.fb;
             document.getElementById('inp-wa').value = appData.links.wa;
@@ -792,6 +901,7 @@
             document.getElementById('inp-ig').value = appData.links.ig;
             document.getElementById('inp-map-changklan').value = appData.links.mapChangklan;
             document.getElementById('inp-map-nimman').value = appData.links.mapNimman;
+            
             // Contact
             document.getElementById('inp-address').value = appData.contact.address;
             document.getElementById('inp-email').value = appData.contact.email;
@@ -799,6 +909,74 @@
             renderAdminFleet();
             renderAdminUsers();
         }
+
+        // --- HERO IMAGES LOGIC ---
+        function renderHeroImages() {
+            const container = document.getElementById('hero-images-container');
+            container.innerHTML = '';
+            
+            if(appData.hero.images.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm italic py-2 w-full">No images uploaded. Background will be black.</p>';
+                return;
+            }
+
+            appData.hero.images.forEach((imgSrc, idx) => {
+                const div = document.createElement('div');
+                div.className = "relative group w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-gray-600 shadow-sm bg-black";
+                div.innerHTML = `
+                    <img src="${imgSrc}" class="w-full h-full object-cover" />
+                    <button onclick="removeHeroImage(${idx})" class="absolute inset-0 bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" title="Delete image">
+                        <i class="fa-solid fa-trash text-red-400 text-xl hover:scale-110 transition-transform"></i>
+                    </button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.handleHeroImageUpload = (event) => {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                if (!file.type.match('image.*')) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Slightly higher res for hero background
+                        const MAX_WIDTH = 1200;
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // Compress slightly more for large images
+                        appData.hero.images.push(dataUrl);
+                        renderHeroImages();
+                    }
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        window.removeHeroImage = (idx) => {
+            showConfirm("Are you sure you want to remove this background image?", () => {
+                appData.hero.images.splice(idx, 1);
+                renderHeroImages();
+            });
+        };
 
         // --- USER MANAGEMENT LOGIC ---
         function renderAdminUsers() {
@@ -847,7 +1025,7 @@
             document.getElementById('user-modal-title').innerHTML = '<i class="fa-solid fa-user-pen text-blue-500"></i> Change Password';
             document.getElementById('modal-user-id').value = user.id;
             document.getElementById('modal-user-name').value = user.username;
-            document.getElementById('modal-user-name').disabled = true; // don't edit username easily
+            document.getElementById('modal-user-name').disabled = true; 
             document.getElementById('modal-user-pass').value = user.password;
             document.getElementById('user-modal-error').classList.add('hidden');
             
@@ -876,19 +1054,16 @@
             }
 
             if(id) {
-                // Edit
                 const user = appData.users.find(x => x.id == id);
                 if(user) {
                     user.password = p; 
                 }
             } else {
-                // Check duplicate
                 if(appData.users.find(x => x.username.toLowerCase() === u.toLowerCase())) {
                     document.getElementById('user-modal-error').innerText = "Username already exists.";
                     document.getElementById('user-modal-error').classList.remove('hidden');
                     return;
                 }
-                // Add new
                 appData.users.push({ id: Date.now(), username: u, password: p });
             }
             
@@ -974,7 +1149,7 @@
                             <label class="flex-shrink-0 w-24 h-24 border-2 border-dashed border-gray-600 bg-[#1e1e2f] hover:bg-admin-card rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-admin-accent hover:text-admin-accent text-gray-500 transition shadow-inner">
                                 <i class="fa-solid fa-cloud-arrow-up text-2xl mb-1"></i>
                                 <span class="text-[10px] font-bold tracking-wider uppercase mt-1">Upload</span>
-                                <input type="file" accept="image/*" multiple class="hidden" onchange="handleImageUpload(event, ${bike.id})">
+                                <input type="file" accept="image/*" multiple class="hidden" onchange="handleFleetImageUpload(event, ${bike.id})">
                             </label>
                         </div>
                     </div>
@@ -993,8 +1168,7 @@
             });
         }
 
-        // Auto-compress image to avoid hitting LocalStorage 5MB limit easily
-        window.handleImageUpload = (event, bikeId) => {
+        window.handleFleetImageUpload = (event, bikeId) => {
             const files = event.target.files;
             if (!files || files.length === 0) return;
 
@@ -1012,7 +1186,6 @@
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         
-                        // Max width for compression
                         const MAX_WIDTH = 800;
                         let width = img.width;
                         let height = img.height;
@@ -1026,7 +1199,6 @@
                         canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // Compress to JPEG with 0.7 quality
                         const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
                         bike.images.push(dataUrl);
                         renderAdminFleet();
@@ -1085,6 +1257,12 @@
 
         // Save All Changes (Explicit button click)
         document.getElementById('btn-save-all').addEventListener('click', () => {
+            // Hero
+            appData.hero.title1 = document.getElementById('inp-hero-t1').value;
+            appData.hero.title2 = document.getElementById('inp-hero-t2').value;
+            appData.hero.desc = document.getElementById('inp-hero-desc').value;
+
+            // Links
             appData.links.fb = document.getElementById('inp-fb').value;
             appData.links.wa = document.getElementById('inp-wa').value;
             appData.links.line = document.getElementById('inp-line').value;
@@ -1094,6 +1272,7 @@
             appData.links.mapChangklan = document.getElementById('inp-map-changklan').value;
             appData.links.mapNimman = document.getElementById('inp-map-nimman').value;
             
+            // Contact
             appData.contact.address = document.getElementById('inp-address').value;
             appData.contact.email = document.getElementById('inp-email').value;
 
